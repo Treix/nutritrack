@@ -625,7 +625,10 @@ function doOffline(q){
   renderResults();
 }
 
-// ── Online search: tries multiple endpoints ──
+// DE→EN translation for better OFF search results
+var DE_EN={'apfel':'apple','birne':'pear','banane':'banana','orange':'orange','erdbeere':'strawberry','blaubeere':'blueberry','kirsche':'cherry','trauben':'grapes','kiwi':'kiwi','mango':'mango','avocado':'avocado','wassermelone':'watermelon','pfirsich':'peach','himbeere':'raspberry','tomate':'tomato','gurke':'cucumber','möhre':'carrot','karotte':'carrot','brokkoli':'broccoli','spinat':'spinach','paprika':'bell pepper','zucchini':'zucchini','blumenkohl':'cauliflower','zwiebel':'onion','knoblauch':'garlic','pilze':'mushroom','champignon':'mushroom','kartoffel':'potato','süßkartoffel':'sweet potato','mais':'corn','erbsen':'peas','salat':'lettuce','hähnchen':'chicken','hühnerbrust':'chicken breast','putenbrust':'turkey breast','rinderhack':'ground beef','lachs':'salmon','thunfisch':'tuna','garnelen':'shrimp','ei':'egg','eier':'eggs','milch':'milk','käse':'cheese','joghurt':'yogurt','quark':'quark','butter':'butter','hafermilch':'oat milk','sojamilch':'soy milk','brot':'bread','brötchen':'bread roll','haferflocken':'oats','müsli':'muesli','reis':'rice','nudeln':'pasta','quinoa':'quinoa','mandeln':'almonds','walnüsse':'walnuts','erdnüsse':'peanuts','cashews':'cashews','linsen':'lentils','kichererbsen':'chickpeas','tofu':'tofu','schokolade':'chocolate','honig':'honey','olivenöl':'olive oil','kaffee':'coffee','tee':'tea'};
+
+// ── Online search with local-first + DE→EN translation ──
 function doOnline(q){
   if(!q){ showToast('Suchbegriff eingeben'); return; }
   var btn=document.getElementById('searchBtn');
@@ -633,49 +636,59 @@ function doOnline(q){
   selFood=null; document.getElementById('addSec').classList.add('hidden');
   document.getElementById('searchRes').innerHTML='';
 
-  // Search both German and international OFF, merge results
-  var baseUrl='https://world.openfoodfacts.org/cgi/search.pl?search_simple=1&action=process&json=1&page_size=20&fields=product_name,product_name_de,nutriments,categories';
-  var deUrl=baseUrl+'&lc=de&search_terms='+encodeURIComponent(q);
-  var intUrl=baseUrl+'&search_terms='+encodeURIComponent(q);
+  var ql=q.toLowerCase().trim();
+  var eng=DE_EN[ql]||null;
 
-  // Use corsproxy for both
+  // Always show local DB matches first (instant)
+  var localMatches=BUILTIN.filter(function(f){ return f.n.toLowerCase().includes(ql); }).slice(0,3).map(function(f){
+    return {name:f.n,emoji:f.e,per100:{kcal:f.k,protein:f.p,carbs:f.c,fat:f.f},isLocal:true};
+  });
+
   var proxy='https://corsproxy.io/?';
+  var baseUrl='https://world.openfoodfacts.org/cgi/search.pl?search_simple=1&action=process&json=1&page_size=24&fields=product_name,product_name_de,nutriments';
 
-  Promise.all([
-    fetch(proxy+encodeURIComponent(deUrl)).then(function(r){return r.json();}).catch(function(){return {products:[]};}),
-    fetch(proxy+encodeURIComponent(intUrl)).then(function(r){return r.json();}).catch(function(){return {products:[]};})
-  ]).then(function(results){
+  // Fetch original term + English translation in parallel
+  var terms=[q];
+  if(eng) terms.push(eng);
+  var fetches=terms.map(function(term){
+    return fetch(proxy+encodeURIComponent(baseUrl+'&search_terms='+encodeURIComponent(term)))
+      .then(function(r){ return r.json(); })
+      .catch(function(){ return {products:[]}; });
+  });
+
+  Promise.all(fetches).then(function(results){
     var seen={};
-    var all=[];
-    [results[0].products||[], results[1].products||[]].forEach(function(list){
-      list.forEach(function(p){
+    localMatches.forEach(function(f){ seen[f.name.toLowerCase()]=true; });
+    var online=[];
+    results.forEach(function(data){
+      (data.products||[]).forEach(function(p){
         var nm=p.nutriments||{};
         var name=(p.product_name_de||p.product_name||'').trim();
-        if(!name) return;
+        if(!name||name.length<3) return;
         var kcal=nm['energy-kcal_100g']||0;
-        if(kcal<=0) return;
+        if(kcal<=0||kcal>900) return;
         var key=name.toLowerCase();
         if(seen[key]) return;
         seen[key]=true;
-        all.push({name:name,emoji:emo(name),per100:{kcal:kcal,protein:nm['proteins_100g']||0,carbs:nm['carbohydrates_100g']||0,fat:nm['fat_100g']||0}});
+        var pr=nm['proteins_100g']||0,ca=nm['carbohydrates_100g']||0,fa=nm['fat_100g']||0;
+        var nameScore=(key===ql||key===(eng||'__'))?3:((key.startsWith(ql)||key.startsWith(eng||'__'))?2:0);
+        var macroScore=(pr>0?1:0)+(ca>0?1:0)+(fa>0?1:0);
+        online.push({name:name,emoji:emo(name),per100:{kcal:kcal,protein:pr,carbs:ca,fat:fa},score:nameScore+macroScore});
       });
     });
-    // Sort by completeness (prefer items with all macros)
-    all.sort(function(a,b){
-      var scoreA=(a.per100.protein>0?1:0)+(a.per100.carbs>0?1:0)+(a.per100.fat>0?1:0);
-      var scoreB=(b.per100.protein>0?1:0)+(b.per100.carbs>0?1:0)+(b.per100.fat>0?1:0);
-      return scoreB-scoreA;
-    });
-    srchProducts=all.slice(0,10);
+    online.sort(function(a,b){ return b.score-a.score; });
+    srchProducts=localMatches.concat(online.slice(0,8));
     btn.innerHTML='Suchen'; btn.disabled=false;
     if(!srchProducts.length){
-      document.getElementById('searchRes').innerHTML='<div class="nr">Kein Online-Ergebnis.<br>Versuche einen anderen Begriff oder nutze <b>Lokal</b>.</div>';
+      document.getElementById('searchRes').innerHTML='<div class="nr">Kein Ergebnis.<br>Versuche <b>Lokal</b> oder einen englischen Begriff.</div>';
       return;
     }
     renderResults();
   }).catch(function(){
     btn.innerHTML='Suchen'; btn.disabled=false;
-    document.getElementById('searchRes').innerHTML='<div class="nr">⚠️ Online-Suche nicht verfügbar.<br>Nutze <b>Gespeichert</b> oder <b>Lokal</b>.</div>';
+    srchProducts=localMatches;
+    if(srchProducts.length){ renderResults(); return; }
+    document.getElementById('searchRes').innerHTML='<div class="nr">⚠️ Online-Suche nicht verfügbar.<br>Nutze <b>Lokal</b>.</div>';
   });
 }
 
