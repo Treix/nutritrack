@@ -643,7 +643,7 @@ function doOnline(q){
 
   Promise.all([
     fetch(proxy+encodeURIComponent(deUrl)).then(function(r){return r.json();}).catch(function(){return {products:[]};}),
-    fetch(proxy+encodeURIComponent(intUrl)).then(function(r){return r.json();}).catch(function(){return {products:[];})
+    fetch(proxy+encodeURIComponent(intUrl)).then(function(r){return r.json();}).catch(function(){return {products:[]};})
   ]).then(function(results){
     var seen={};
     var all=[];
