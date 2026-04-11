@@ -21,8 +21,7 @@
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 body{font-family:'Nunito Sans',sans-serif;background:var(--bg);color:var(--tx);min-height:100vh;max-width:430px;margin:0 auto;padding-bottom:84px;overflow-x:hidden;}
-button,input,select,textarea{font-family:'Nunito Sans',sans-serif;cursor:pointer;touch-action:manipulation;}
-a{touch-action:manipulation;}
+button,input,select,textarea{font-family:'Nunito Sans',sans-serif;cursor:pointer;}
 .screen{display:none;flex-direction:column;min-height:100vh;}
 .screen.active{display:flex;}
 .hidden{display:none!important;}
@@ -102,12 +101,12 @@ a{touch-action:manipulation;}
 .gls{width:34px;height:34px;border-radius:9px;border:2px solid var(--br);background:white;font-size:17px;display:flex;align-items:center;justify-content:center;cursor:pointer;}
 .gls.on{background:#e3f2fd;border-color:#90caf9;}
 /* NAV */
-.bnav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:white;border-top:1px solid var(--br);display:flex;align-items:flex-end;z-index:200;}
-.ni{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 0 12px;background:none;border:none;font-size:10px;color:var(--mu);gap:2px;position:relative;z-index:1;min-height:64px;}
+.bnav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:white;border-top:1px solid var(--br);display:flex;z-index:200;}
+.ni{flex:1;display:flex;flex-direction:column;align-items:center;padding:8px 0 12px;background:none;border:none;font-size:10px;color:var(--mu);gap:2px;}
 .ni.on{color:var(--g2);}
 .ni span{font-size:20px;}
-.cw{flex:1;display:flex;justify-content:center;pointer-events:none;position:relative;min-height:64px;}
-.cb{width:54px;height:54px;border-radius:50%;background:linear-gradient(135deg,var(--g1),var(--g2));border:3px solid white;color:white;font-size:22px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(76,175,125,.4);position:relative;top:-13px;z-index:2;pointer-events:auto;touch-action:manipulation;}
+.cw{flex:1;display:flex;justify-content:center;}
+.cb{width:54px;height:54px;border-radius:50%;background:linear-gradient(135deg,var(--g1),var(--g2));border:3px solid white;color:white;font-size:22px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(76,175,125,.4);position:relative;top:-13px;}
 .cb:active{transform:scale(.93);}
 /* OVERLAYS */
 .ov{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:300;display:none;align-items:flex-end;justify-content:center;backdrop-filter:blur(3px);}
@@ -293,8 +292,8 @@ a{touch-action:manipulation;}
   </div>
   <div class="bnav">
     <button type="button" class="ni on" id="nM" onclick="switchTab('main')"><span>🏠</span>Heute</button>
-    <button type="button" class="ni" onclick="openChat()" aria-label="KI-Chat öffnen"><span>💬</span>KI-Chat</button>
-    <div class="cw"><button type="button" class="cb" onclick="openPhoto()" aria-label="Foto öffnen">📷</button></div>
+    <button type="button" class="ni" onclick="openChat()"><span>💬</span>KI-Chat</button>
+    <div class="cw"><button type="button" class="cb" onclick="openPhoto()">📷</button></div>
     <button type="button" class="ni" id="nS" onclick="switchTab('stats')"><span>📊</span>Statistik</button>
     <button type="button" class="ni" onclick="openSettings()"><span>⚙️</span>Profil</button>
   </div>
@@ -314,8 +313,8 @@ a{touch-action:manipulation;}
   </div>
   <div class="bnav">
     <button type="button" class="ni" id="nM2" onclick="switchTab('main')"><span>🏠</span>Heute</button>
-    <button type="button" class="ni" onclick="openChat()" aria-label="KI-Chat öffnen"><span>💬</span>KI-Chat</button>
-    <div class="cw"><button type="button" class="cb" onclick="openPhoto()" aria-label="Foto öffnen">📷</button></div>
+    <button type="button" class="ni" onclick="openChat()"><span>💬</span>KI-Chat</button>
+    <div class="cw"><button type="button" class="cb" onclick="openPhoto()">📷</button></div>
     <button type="button" class="ni on" id="nS2" onclick="switchTab('stats')"><span>📊</span>Statistik</button>
     <button type="button" class="ni" onclick="openSettings()"><span>⚙️</span>Profil</button>
   </div>
@@ -438,7 +437,7 @@ a{touch-action:manipulation;}
           <img id="pPrev">
           <button type="button" class="pchange" onclick="resetPhotoPanel()">Ändern</button>
         </div>
-        <button type="button" class="abt" id="aBtn" disabled style="margin-bottom:10px;" onclick="doAnalyze()">📷 Analysieren</button>
+        <button type="button" class="abt" id="aBtn" disabled style="margin-bottom:10px;">📷 Analysieren</button>
       </div>
 
       <!-- Barcode confirm dialog -->
@@ -887,6 +886,15 @@ function saveEditEntry(){
 function deleteEntry(){getDay().meals[editM].splice(editI,1);saveS();renderAll();closeOv('editOv');}
 
 // ═══════════ EMOJI ═══════════
+
+function mealByTime(){
+  var h=new Date().getHours();
+  if(h<11)return 'breakfast';
+  if(h<15)return 'lunch';
+  if(h<22)return 'dinner';
+  return 'snack';
+}
+
 function emo(n){
   var nl=(n||'').toLowerCase();
   var m=[[/banane/,'🍌'],[/apfel|äpfel/,'🍎'],[/birne/,'🍐'],[/orange|mandarine/,'🍊'],[/erdbeere/,'🍓'],[/blaubeer|heidelbeer/,'🫐'],[/himbeere/,'🫐'],[/kirsch/,'🍒'],[/trauben/,'🍇'],[/kiwi/,'🥝'],[/mango/,'🥭'],[/avocado/,'🥑'],[/melone/,'🍉'],[/pfirsich|nektarine/,'🍑'],[/tomate/,'🍅'],[/gurke/,'🥒'],[/karott|möhre/,'🥕'],[/brokkoli/,'🥦'],[/blumenkohl/,'🥦'],[/spinat/,'🥬'],[/salat|rucola|kohl/,'🥬'],[/paprika/,'🫑'],[/pilz|champignon/,'🍄'],[/kartoffel/,'🥔'],[/süßkartoffel/,'🍠'],[/mais/,'🌽'],[/hähnchen|huhn|chicken|hühnerbrust/,'🍗'],[/rind|beef|hack/,'🥩'],[/pute|turkey/,'🦃'],[/lachs|salmon/,'🐟'],[/thunfisch|tuna/,'🐠'],[/garnele|shrimp/,'🦐'],[/\bei\b|eier|egg/,'🥚'],[/milch|milk/,'🥛'],[/käse|cheese/,'🧀'],[/joghurt|yogurt/,'🥣'],[/quark/,'🥄'],[/butter/,'🧈'],[/brot|bread/,'🍞'],[/brötchen/,'🥖'],[/haferflocken|oat/,'🌾'],[/müsli|granola/,'🥣'],[/reis|rice/,'🍚'],[/pasta|nudel|spaghetti/,'🍝'],[/mandel|cashew|erdnuss|walnuss|nuss/,'🥜'],[/chiasamen|sesam/,'🌱'],[/öl|oil/,'🫙'],[/linsen|bohne|kichererbse/,'🫘'],[/tofu|tempeh/,'🧆'],[/schokolade|chocolate|nutella/,'🍫'],[/chips/,'🥔'],[/honig|honey/,'🍯'],[/protein|whey/,'💪'],[/pizza/,'🍕'],[/burger|hamburger/,'🍔'],[/pommes/,'🍟'],[/sushi/,'🍣'],[/döner/,'🥙'],[/kaffee|coffee|espresso/,'☕'],[/tee|tea/,'🍵'],[/saft|juice/,'🧃'],[/cola/,'🥤'],[/bier|beer/,'🍺'],[/wein|wine/,'🍷'],[/salami|speck|schinken|wurst/,'🍖']];
