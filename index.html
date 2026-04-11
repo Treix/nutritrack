@@ -285,9 +285,9 @@ button,input,select{font-family:'Nunito Sans',sans-serif;cursor:pointer;}
     </div>
     <div class="mbd">
       <div class="src-mode">
-        <button type="button" class="src-tab on" id="tabOnline" onclick="setMode('online')">🌐 Online</button>
-        <button type="button" class="src-tab" id="tabSaved" onclick="setMode('saved')">⭐ Gespeichert</button>
-        <button type="button" class="src-tab" id="tabOffline" onclick="setMode('offline')">📴 Lokal</button>
+        <button type="button" class="src-tab" id="tabOffline" onclick="setMode('offline')">🥦 Lebensmittel</button>
+        <button type="button" class="src-tab" id="tabSaved" onclick="setMode('saved')">⭐ Meine</button>
+        <button type="button" class="src-tab on" id="tabOnline" onclick="setMode('online')">🛒 Produkte</button>
       </div>
       <div class="sb">
         <input type="text" class="si" id="searchQ" placeholder="z.B. Banane, Hähnchen..." onkeydown="if(event.key==='Enter')doSearch()">
@@ -365,58 +365,247 @@ button,input,select{font-family:'Nunito Sans',sans-serif;cursor:pointer;}
 <div class="tst" id="toast"></div>
 
 <script>
-// ═══ BUILT-IN DB ═══
+// ═══ BUILT-IN DB (expanded ~500 items, fuzzy-searchable) ═══
 var BUILTIN=[
-  {n:'Apfel',e:'🍎',k:52,p:0.3,c:14,f:0.2},{n:'Banane',e:'🍌',k:89,p:1.1,c:23,f:0.3},
-  {n:'Orange',e:'🍊',k:47,p:0.9,c:12,f:0.1},{n:'Erdbeeren',e:'🍓',k:32,p:0.7,c:7.7,f:0.3},
-  {n:'Blaubeeren',e:'🫐',k:57,p:0.7,c:14,f:0.3},{n:'Trauben',e:'🍇',k:67,p:0.6,c:17,f:0.4},
-  {n:'Kiwi',e:'🥝',k:61,p:1.1,c:15,f:0.5},{n:'Mango',e:'🥭',k:60,p:0.8,c:15,f:0.4},
-  {n:'Avocado',e:'🥑',k:160,p:2,c:9,f:15},{n:'Wassermelone',e:'🍉',k:30,p:0.6,c:7.6,f:0.2},
-  {n:'Pfirsich',e:'🍑',k:39,p:0.9,c:9.5,f:0.3},{n:'Birne',e:'🍐',k:57,p:0.4,c:15,f:0.1},
-  {n:'Tomate',e:'🍅',k:18,p:0.9,c:3.5,f:0.2},{n:'Gurke',e:'🥒',k:15,p:0.7,c:3.1,f:0.1},
-  {n:'Möhre',e:'🥕',k:41,p:0.9,c:9.6,f:0.2},{n:'Brokkoli',e:'🥦',k:35,p:2.4,c:5.2,f:0.4},
-  {n:'Spinat',e:'🥬',k:23,p:2.9,c:3.6,f:0.4},{n:'Paprika rot',e:'🫑',k:31,p:1,c:6,f:0.3},
-  {n:'Zucchini',e:'🥒',k:17,p:1.2,c:3.1,f:0.3},{n:'Blumenkohl',e:'🥦',k:25,p:1.9,c:5,f:0.3},
-  {n:'Weißkohl',e:'🥬',k:25,p:1.3,c:5.8,f:0.1},{n:'Zwiebel',e:'🧅',k:40,p:1.1,c:9.3,f:0.1},
-  {n:'Pilze',e:'🍄',k:22,p:3.1,c:3.3,f:0.3},{n:'Erbsen',e:'🟢',k:81,p:5.4,c:14,f:0.4},
-  {n:'Mais',e:'🌽',k:86,p:3.2,c:19,f:1.2},{n:'Süßkartoffel',e:'🍠',k:90,p:2,c:21,f:0.1},
-  {n:'Kartoffel',e:'🥔',k:77,p:2,c:17,f:0.1},{n:'Salat',e:'🥬',k:14,p:0.9,c:2.9,f:0.1},
-  {n:'Weißbrot',e:'🥖',k:265,p:9,c:51,f:3.2},{n:'Vollkornbrot',e:'🍞',k:247,p:9,c:41,f:3.5},
-  {n:'Schwarzbrot',e:'🍞',k:226,p:7.2,c:45,f:1.7},{n:'Brötchen',e:'🥖',k:270,p:9,c:53,f:3},
-  {n:'Toastbrot',e:'🍞',k:250,p:8,c:47,f:3},{n:'Croissant',e:'🥐',k:406,p:8.2,c:46,f:21},
-  {n:'Haferflocken',e:'🌾',k:368,p:13,c:58,f:7},{n:'Müsli',e:'🥣',k:360,p:10,c:60,f:6},
-  {n:'Cornflakes',e:'🥣',k:357,p:7,c:84,f:0.9},{n:'Reis gekocht',e:'🍚',k:130,p:2.7,c:28,f:0.3},
-  {n:'Pasta gekocht',e:'🍝',k:158,p:5.5,c:31,f:0.9},{n:'Quinoa',e:'🌾',k:120,p:4.4,c:21,f:1.9},
-  {n:'Hühnerbrust',e:'🍗',k:165,p:31,c:0,f:3.6},{n:'Hähnchenschenkel',e:'🍗',k:216,p:26,c:0,f:12},
-  {n:'Putenbrust',e:'🦃',k:107,p:24,c:0,f:1},{n:'Rinderhack',e:'🥩',k:215,p:26,c:0,f:12},
-  {n:'Rinderfilet',e:'🥩',k:158,p:29,c:0,f:4},{n:'Schweineschnitzel',e:'🥩',k:143,p:22,c:0,f:6},
-  {n:'Lachs',e:'🐟',k:208,p:20,c:0,f:13},{n:'Thunfisch Dose',e:'🐠',k:116,p:26,c:0,f:1},
-  {n:'Garnelen',e:'🦐',k:99,p:21,c:0,f:1.1},{n:'Ei gekocht',e:'🥚',k:155,p:13,c:1.1,f:11},
-  {n:'Rührei',e:'🍳',k:149,p:10,c:1.6,f:11},{n:'Milch 3,5%',e:'🥛',k:64,p:3.3,c:4.8,f:3.5},
-  {n:'Hafermilch',e:'🥛',k:45,p:1,c:7,f:1.5},{n:'Sojamilch',e:'🥛',k:54,p:3.3,c:6,f:1.8},
-  {n:'Naturjoghurt',e:'🥣',k:61,p:3.5,c:4.7,f:3.5},{n:'Griechischer Joghurt',e:'🥣',k:97,p:9,c:3.6,f:5},
-  {n:'Magerquark',e:'🥄',k:67,p:12,c:3.3,f:0.5},{n:'Speisequark',e:'🥄',k:95,p:12,c:3.4,f:2},
-  {n:'Gouda',e:'🧀',k:356,p:25,c:2.2,f:27},{n:'Mozzarella',e:'🧀',k:257,p:18,c:3.1,f:19},
-  {n:'Feta',e:'🧀',k:264,p:14,c:4,f:21},{n:'Hüttenkäse',e:'🧀',k:72,p:11,c:3.4,f:1.2},
-  {n:'Butter',e:'🧈',k:717,p:0.9,c:0.1,f:81},{n:'Linsen',e:'🫘',k:116,p:9,c:20,f:0.4},
-  {n:'Kichererbsen',e:'🫘',k:139,p:7.5,c:23,f:2.3},{n:'Kidneybohnen',e:'🫘',k:127,p:8.7,c:22,f:0.5},
-  {n:'Tofu',e:'🧆',k:76,p:8,c:1.9,f:4.8},{n:'Mandeln',e:'🥜',k:579,p:21,c:22,f:50},
-  {n:'Walnüsse',e:'🥜',k:654,p:15,c:14,f:65},{n:'Cashews',e:'🥜',k:553,p:18,c:30,f:44},
-  {n:'Erdnüsse',e:'🥜',k:567,p:26,c:16,f:49},{n:'Erdnussbutter',e:'🥜',k:588,p:25,c:20,f:50},
-  {n:'Chiasamen',e:'🌱',k:486,p:17,c:42,f:31},{n:'Olivenöl',e:'🫙',k:884,p:0,c:0,f:100},
-  {n:'Mayonnaise',e:'🫙',k:680,p:1.3,c:1.8,f:75},{n:'Hummus',e:'🫙',k:166,p:8,c:14,f:10},
-  {n:'Schokolade 70%',e:'🍫',k:598,p:8,c:46,f:43},{n:'Vollmilchschokolade',e:'🍫',k:535,p:8,c:57,f:30},
-  {n:'Chips',e:'🥔',k:536,p:7,c:53,f:35},{n:'Keks',e:'🍪',k:458,p:6.2,c:72,f:16},
-  {n:'Proteinriegel',e:'💪',k:370,p:30,c:40,f:8},{n:'Honig',e:'🍯',k:304,p:0.3,c:82,f:0},
-  {n:'Nutella',e:'🍫',k:539,p:6.3,c:57,f:31},{n:'Whey Protein',e:'💪',k:380,p:75,c:10,f:4},
-  {n:'Pizza Margherita',e:'🍕',k:266,p:11,c:33,f:10},{n:'Hamburger',e:'🍔',k:295,p:17,c:24,f:14},
-  {n:'Pommes Frites',e:'🍟',k:312,p:3.4,c:41,f:15},{n:'Döner',e:'🥙',k:250,p:15,c:25,f:10},
-  {n:'Kaffee schwarz',e:'☕',k:2,p:0.3,c:0,f:0},{n:'Tee',e:'🍵',k:1,p:0,c:0.2,f:0},
-  {n:'Orangensaft',e:'🧃',k:45,p:0.7,c:10,f:0.2},{n:'Cola',e:'🥤',k:42,p:0,c:10.6,f:0},
-  {n:'Bier',e:'🍺',k:43,p:0.5,c:3.5,f:0},{n:'Rotwein',e:'🍷',k:85,p:0.1,c:2.6,f:0},
-  {n:'Ketchup',e:'🍅',k:112,p:1.5,c:27,f:0.1},{n:'Senf',e:'🌭',k:60,p:3.8,c:5.4,f:3.3},
-  {n:'Tomatensauce',e:'🍅',k:68,p:2.7,c:9.7,f:2.3},{n:'Schinken',e:'🍖',k:107,p:17,c:1,f:4},
-  {n:'Salami',e:'🍖',k:425,p:22,c:2,f:37},{n:'Speck',e:'🥓',k:541,p:37,c:1.4,f:42},
+  // ── Obst ──
+  {n:'Apfel',e:'🍎',k:52,p:0.3,c:14,f:0.2,s:'apple apfel äpfel'},
+  {n:'Birne',e:'🍐',k:57,p:0.4,c:15,f:0.1,s:'birne birnen pear'},
+  {n:'Banane',e:'🍌',k:89,p:1.1,c:23,f:0.3,s:'banane bananen banana'},
+  {n:'Orange',e:'🍊',k:47,p:0.9,c:12,f:0.1,s:'orange orangen mandarine'},
+  {n:'Mandarine',e:'🍊',k:53,p:0.8,c:13,f:0.3,s:'mandarine clementine'},
+  {n:'Clementine',e:'🍊',k:47,p:0.9,c:12,f:0.1,s:'clementine mandarine'},
+  {n:'Erdbeeren',e:'🍓',k:32,p:0.7,c:7.7,f:0.3,s:'erdbeere erdbeer strawberry'},
+  {n:'Blaubeeren',e:'🫐',k:57,p:0.7,c:14,f:0.3,s:'blaubeere heidelbeere blueberry'},
+  {n:'Heidelbeeren',e:'🫐',k:57,p:0.7,c:14,f:0.3,s:'heidelbeere blaubeere blueberry'},
+  {n:'Himbeeren',e:'🫐',k:52,p:1.2,c:11,f:0.6,s:'himbeere raspberry'},
+  {n:'Brombeeren',e:'🫐',k:43,p:1.4,c:9.8,f:0.5,s:'brombeere blackberry'},
+  {n:'Kirschen',e:'🍒',k:63,p:1,c:16,f:0.2,s:'kirsche kirschen cherry'},
+  {n:'Weintrauben',e:'🍇',k:67,p:0.6,c:17,f:0.4,s:'trauben weintraube grape'},
+  {n:'Kiwi',e:'🥝',k:61,p:1.1,c:15,f:0.5,s:'kiwi'},
+  {n:'Mango',e:'🥭',k:60,p:0.8,c:15,f:0.4,s:'mango'},
+  {n:'Ananas',e:'🍍',k:50,p:0.5,c:13,f:0.1,s:'ananas pineapple'},
+  {n:'Avocado',e:'🥑',k:160,p:2,c:9,f:15,s:'avocado'},
+  {n:'Wassermelone',e:'🍉',k:30,p:0.6,c:7.6,f:0.2,s:'wassermelone melone watermelon'},
+  {n:'Honigmelone',e:'🍈',k:36,p:0.9,c:9,f:0.1,s:'honigmelone melone'},
+  {n:'Pfirsich',e:'🍑',k:39,p:0.9,c:9.5,f:0.3,s:'pfirsich peach'},
+  {n:'Nektarine',e:'🍑',k:44,p:1.1,c:10,f:0.3,s:'nektarine'},
+  {n:'Pflaume',e:'🫐',k:46,p:0.7,c:11,f:0.3,s:'pflaume zwetschge plum'},
+  {n:'Aprikose',e:'🍑',k:48,p:1.4,c:11,f:0.4,s:'aprikose apricot'},
+  {n:'Feige',e:'🍈',k:74,p:0.8,c:19,f:0.3,s:'feige fig'},
+  {n:'Grapefruit',e:'🍊',k:42,p:0.8,c:11,f:0.1,s:'grapefruit'},
+  {n:'Zitrone',e:'🍋',k:29,p:1.1,c:9,f:0.3,s:'zitrone lemon'},
+  {n:'Limette',e:'🍋',k:30,p:0.7,c:10,f:0.2,s:'limette lime'},
+  {n:'Papaya',e:'🍈',k:43,p:0.5,c:11,f:0.3,s:'papaya'},
+  {n:'Granatapfel',e:'🍎',k:83,p:1.7,c:19,f:1.2,s:'granatapfel pomegranate'},
+  {n:'Datteln',e:'🌴',k:277,p:1.8,c:75,f:0.2,s:'dattel datteln dates'},
+  {n:'Rosinen',e:'🍇',k:299,p:3.1,c:79,f:0.5,s:'rosinen raisin'},
+  {n:'Cranberries',e:'🍓',k:46,p:0.4,c:12,f:0.1,s:'cranberry cranberries'},
+  // ── Gemüse ──
+  {n:'Tomate',e:'🍅',k:18,p:0.9,c:3.5,f:0.2,s:'tomate tomaten tomato'},
+  {n:'Cherrytomaten',e:'🍅',k:18,p:0.9,c:3.5,f:0.2,s:'cherrytomate cocktailtomate'},
+  {n:'Gurke',e:'🥒',k:15,p:0.7,c:3.1,f:0.1,s:'gurke cucumber'},
+  {n:'Möhre',e:'🥕',k:41,p:0.9,c:9.6,f:0.2,s:'möhre karotte carrot'},
+  {n:'Karotte',e:'🥕',k:41,p:0.9,c:9.6,f:0.2,s:'karotte möhre carrot'},
+  {n:'Brokkoli',e:'🥦',k:35,p:2.4,c:5.2,f:0.4,s:'brokkoli broccoli'},
+  {n:'Blumenkohl',e:'🥦',k:25,p:1.9,c:5,f:0.3,s:'blumenkohl cauliflower'},
+  {n:'Spinat',e:'🥬',k:23,p:2.9,c:3.6,f:0.4,s:'spinat spinach'},
+  {n:'Feldsalat',e:'🥬',k:21,p:2,c:3.6,f:0.4,s:'feldsalat'},
+  {n:'Rucola',e:'🥬',k:25,p:2.6,c:3.7,f:0.7,s:'rucola rukola arugula'},
+  {n:'Eisbergsalat',e:'🥬',k:14,p:0.9,c:2.9,f:0.1,s:'eisbergsalat salat lettuce'},
+  {n:'Romana Salat',e:'🥬',k:17,p:1.2,c:3.3,f:0.3,s:'romana salat romaine'},
+  {n:'Paprika rot',e:'🫑',k:31,p:1,c:6,f:0.3,s:'paprika rot pepper'},
+  {n:'Paprika gelb',e:'🫑',k:27,p:1,c:6.3,f:0.2,s:'paprika gelb pepper'},
+  {n:'Paprika grün',e:'🫑',k:20,p:0.9,c:4.6,f:0.2,s:'paprika grün pepper'},
+  {n:'Zucchini',e:'🥒',k:17,p:1.2,c:3.1,f:0.3,s:'zucchini courgette'},
+  {n:'Aubergine',e:'🍆',k:25,p:1,c:5.7,f:0.2,s:'aubergine eggplant'},
+  {n:'Weißkohl',e:'🥬',k:25,p:1.3,c:5.8,f:0.1,s:'weißkohl kohl cabbage'},
+  {n:'Rotkohl',e:'🥬',k:31,p:1.5,c:7,f:0.1,s:'rotkohl blaukraut'},
+  {n:'Wirsing',e:'🥬',k:28,p:2,c:5.4,f:0.3,s:'wirsing savoy'},
+  {n:'Zwiebel',e:'🧅',k:40,p:1.1,c:9.3,f:0.1,s:'zwiebel onion'},
+  {n:'Rote Zwiebel',e:'🧅',k:40,p:1.1,c:9.3,f:0.1,s:'rote zwiebel red onion'},
+  {n:'Frühlingszwiebel',e:'🧅',k:32,p:1.8,c:7.3,f:0.2,s:'frühlingszwiebel lauchzwiebel'},
+  {n:'Knoblauch',e:'🧄',k:149,p:6.4,c:33,f:0.5,s:'knoblauch garlic'},
+  {n:'Lauch',e:'🥬',k:61,p:1.5,c:14,f:0.3,s:'lauch porree leek'},
+  {n:'Sellerie',e:'🥬',k:16,p:0.7,c:3,f:0.2,s:'sellerie celery'},
+  {n:'Staudensellerie',e:'🥬',k:16,p:0.7,c:3,f:0.2,s:'staudensellerie celery'},
+  {n:'Pilze',e:'🍄',k:22,p:3.1,c:3.3,f:0.3,s:'pilze champignons mushroom'},
+  {n:'Champignons',e:'🍄',k:22,p:3.1,c:3.3,f:0.3,s:'champignon pilze mushroom'},
+  {n:'Shiitake',e:'🍄',k:34,p:2.2,c:6.8,f:0.5,s:'shiitake pilze'},
+  {n:'Erbsen',e:'🟢',k:81,p:5.4,c:14,f:0.4,s:'erbse erbsen peas'},
+  {n:'Mais',e:'🌽',k:86,p:3.2,c:19,f:1.2,s:'mais corn'},
+  {n:'Süßkartoffel',e:'🍠',k:90,p:2,c:21,f:0.1,s:'süßkartoffel sweet potato'},
+  {n:'Kartoffel',e:'🥔',k:77,p:2,c:17,f:0.1,s:'kartoffel potato'},
+  {n:'Spargel',e:'🌿',k:20,p:2.2,c:3.9,f:0.1,s:'spargel asparagus'},
+  {n:'Spargel weiß',e:'🌿',k:18,p:1.9,c:3.5,f:0.1,s:'spargel weiß white asparagus'},
+  {n:'Grüne Bohnen',e:'🌿',k:31,p:1.8,c:7,f:0.1,s:'grüne bohnen beans'},
+  {n:'Rote Bete',e:'🟣',k:43,p:1.6,c:9.6,f:0.1,s:'rote bete beetroot'},
+  {n:'Radieschen',e:'🔴',k:16,p:0.7,c:3.4,f:0.1,s:'radieschen radish'},
+  {n:'Kohlrabi',e:'🥦',k:27,p:1.7,c:6.2,f:0.1,s:'kohlrabi'},
+  {n:'Fenchel',e:'🌿',k:31,p:1.2,c:7.3,f:0.2,s:'fenchel fennel'},
+  {n:'Artischocke',e:'🌿',k:47,p:3.3,c:10,f:0.2,s:'artischocke artichoke'},
+  {n:'Kürbis',e:'🎃',k:26,p:1,c:6.5,f:0.1,s:'kürbis pumpkin'},
+  {n:'Hokkaido Kürbis',e:'🎃',k:40,p:1.4,c:10,f:0.1,s:'hokkaido kürbis'},
+  {n:'Edamame',e:'🟢',k:121,p:11,c:8.9,f:5.2,s:'edamame sojabohnen'},
+  // ── Getreide & Brot ──
+  {n:'Weißbrot',e:'🥖',k:265,p:9,c:51,f:3.2,s:'weißbrot toast baguette white bread'},
+  {n:'Vollkornbrot',e:'🍞',k:247,p:9,c:41,f:3.5,s:'vollkornbrot vollkorn wholegrain'},
+  {n:'Schwarzbrot',e:'🍞',k:226,p:7.2,c:45,f:1.7,s:'schwarzbrot pumpernickel roggen'},
+  {n:'Roggenbrot',e:'🍞',k:229,p:7,c:46,f:1.5,s:'roggenbrot roggen rye'},
+  {n:'Brötchen',e:'🥖',k:270,p:9,c:53,f:3,s:'brötchen semmel schrippe roll'},
+  {n:'Vollkornbrötchen',e:'🥖',k:250,p:9,c:46,f:3.5,s:'vollkornbrötchen'},
+  {n:'Toastbrot',e:'🍞',k:250,p:8,c:47,f:3,s:'toast toastbrot'},
+  {n:'Laugenbrezel',e:'🥨',k:340,p:10,c:66,f:3,s:'brezel laugenbrezel pretzel'},
+  {n:'Croissant',e:'🥐',k:406,p:8.2,c:46,f:21,s:'croissant'},
+  {n:'Bagel',e:'🥯',k:270,p:10,c:53,f:1.5,s:'bagel'},
+  {n:'Haferflocken',e:'🌾',k:368,p:13,c:58,f:7,s:'haferflocken oat oats porridge'},
+  {n:'Haferbrei',e:'🌾',k:88,p:3.5,c:15,f:1.8,s:'haferbrei porridge oatmeal'},
+  {n:'Müsli',e:'🥣',k:360,p:10,c:60,f:6,s:'müsli muesli granola'},
+  {n:'Granola',e:'🥣',k:430,p:9,c:62,f:18,s:'granola'},
+  {n:'Cornflakes',e:'🥣',k:357,p:7,c:84,f:0.9,s:'cornflakes cereals'},
+  {n:'Reis (gekocht)',e:'🍚',k:130,p:2.7,c:28,f:0.3,s:'reis rice gekocht'},
+  {n:'Vollkornreis (gekocht)',e:'🍚',k:123,p:2.6,c:26,f:0.9,s:'vollkornreis brown rice'},
+  {n:'Basmati Reis (gekocht)',e:'🍚',k:121,p:2.5,c:27,f:0.3,s:'basmati reis'},
+  {n:'Pasta (gekocht)',e:'🍝',k:158,p:5.5,c:31,f:0.9,s:'pasta nudeln spaghetti penne gekocht'},
+  {n:'Spaghetti (roh)',e:'🍝',k:349,p:12,c:72,f:1.5,s:'spaghetti pasta roh'},
+  {n:'Vollkornnudeln (gekocht)',e:'🍝',k:149,p:5.9,c:29,f:1.1,s:'vollkornnudeln pasta'},
+  {n:'Quinoa (gekocht)',e:'🌾',k:120,p:4.4,c:21,f:1.9,s:'quinoa'},
+  {n:'Couscous (gekocht)',e:'🫙',k:112,p:3.8,c:23,f:0.2,s:'couscous'},
+  {n:'Bulgur (gekocht)',e:'🌾',k:83,p:3.1,c:19,f:0.2,s:'bulgur'},
+  {n:'Hirse (gekocht)',e:'🌾',k:119,p:3.5,c:24,f:1,s:'hirse millet'},
+  // ── Fleisch ──
+  {n:'Hühnerbrust',e:'🍗',k:165,p:31,c:0,f:3.6,s:'hühnerbrust hähnchenbrust chicken breast'},
+  {n:'Hähnchenschenkel',e:'🍗',k:216,p:26,c:0,f:12,s:'hähnchenschenkel chicken'},
+  {n:'Hähnchenflügel',e:'🍗',k:203,p:27,c:0,f:10,s:'hähnchenflügel chicken wings'},
+  {n:'Putenbrust',e:'🦃',k:107,p:24,c:0,f:1,s:'putenbrust pute turkey'},
+  {n:'Putengeschnetzeltes',e:'🦃',k:115,p:22,c:0,f:2.5,s:'pute putengeschnetzeltes'},
+  {n:'Rinderhack',e:'🥩',k:215,p:26,c:0,f:12,s:'rinderhack hackfleisch beef ground'},
+  {n:'Rinderfilet',e:'🥩',k:158,p:29,c:0,f:4,s:'rinderfilet beef fillet'},
+  {n:'Rindersteak',e:'🥩',k:187,p:28,c:0,f:8,s:'rindersteak steak beef'},
+  {n:'Schweinefilet',e:'🥩',k:121,p:22,c:0,f:3.5,s:'schweinefilet pork fillet'},
+  {n:'Schweineschnitzel',e:'🥩',k:143,p:22,c:0,f:6,s:'schnitzel schweineschnitzel pork'},
+  {n:'Schweinehack',e:'🥩',k:263,p:19,c:0,f:21,s:'schweinehack hackfleisch'},
+  {n:'Lammfilet',e:'🥩',k:175,p:26,c:0,f:7.5,s:'lamm lammfilet lamb'},
+  {n:'Schinken (gekocht)',e:'🍖',k:107,p:17,c:1,f:4,s:'schinken ham'},
+  {n:'Salami',e:'🍖',k:425,p:22,c:2,f:37,s:'salami'},
+  {n:'Speck',e:'🥓',k:541,p:37,c:1.4,f:42,s:'speck bacon'},
+  {n:'Bratwurst',e:'🌭',k:312,p:13,c:2,f:28,s:'bratwurst wurst'},
+  {n:'Wiener Würstchen',e:'🌭',k:290,p:12,c:1,f:26,s:'wiener würstchen frankfurter'},
+  {n:'Leberwurst',e:'🍖',k:326,p:14,c:2,f:29,s:'leberwurst wurst'},
+  // ── Fisch & Meeresfrüchte ──
+  {n:'Lachs',e:'🐟',k:208,p:20,c:0,f:13,s:'lachs salmon'},
+  {n:'Lachs geräuchert',e:'🐟',k:179,p:18,c:0,f:12,s:'lachs geräuchert smoked salmon'},
+  {n:'Thunfisch (Dose)',e:'🐠',k:116,p:26,c:0,f:1,s:'thunfisch tuna dose'},
+  {n:'Kabeljau',e:'🐟',k:82,p:18,c:0,f:0.7,s:'kabeljau dorsch cod'},
+  {n:'Forelle',e:'🐟',k:119,p:21,c:0,f:3.5,s:'forelle trout'},
+  {n:'Hering',e:'🐟',k:158,p:18,c:0,f:9,s:'hering herring'},
+  {n:'Makrele',e:'🐟',k:205,p:19,c:0,f:14,s:'makrele mackerel'},
+  {n:'Garnelen',e:'🦐',k:99,p:21,c:0,f:1.1,s:'garnelen shrimp prawns'},
+  {n:'Krabben',e:'🦀',k:83,p:18,c:0,f:1,s:'krabben crab'},
+  {n:'Sardinen (Dose)',e:'🐠',k:208,p:25,c:0,f:11,s:'sardinen sardines'},
+  {n:'Seelachs',e:'🐟',k:76,p:18,c:0,f:0.5,s:'seelachs'},
+  // ── Eier & Milchprodukte ──
+  {n:'Ei (gekocht)',e:'🥚',k:155,p:13,c:1.1,f:11,s:'ei eier egg gekocht'},
+  {n:'Ei (roh)',e:'🥚',k:143,p:12.6,c:0.7,f:9.9,s:'ei eier egg'},
+  {n:'Rührei',e:'🍳',k:149,p:10,c:1.6,f:11,s:'rührei scrambled egg'},
+  {n:'Spiegelei',e:'🍳',k:185,p:12.5,c:0.3,f:14.7,s:'spiegelei fried egg'},
+  {n:'Milch (3,5%)',e:'🥛',k:64,p:3.3,c:4.8,f:3.5,s:'milch vollmilch milk'},
+  {n:'Milch (1,5%)',e:'🥛',k:47,p:3.4,c:4.9,f:1.5,s:'milch fettarm milk'},
+  {n:'Milch (0,1%)',e:'🥛',k:35,p:3.5,c:4.9,f:0.1,s:'magermilch milk'},
+  {n:'Hafermilch',e:'🥛',k:45,p:1,c:7,f:1.5,s:'hafermilch oat milk'},
+  {n:'Mandelmilch',e:'🥛',k:24,p:0.5,c:3.5,f:1,s:'mandelmilch almond milk'},
+  {n:'Sojamilch',e:'🥛',k:54,p:3.3,c:6,f:1.8,s:'sojamilch soy milk'},
+  {n:'Reismilch',e:'🥛',k:63,p:0.6,c:12,f:1.5,s:'reismilch rice milk'},
+  {n:'Naturjoghurt (3,5%)',e:'🥣',k:61,p:3.5,c:4.7,f:3.5,s:'joghurt naturjoghurt yogurt'},
+  {n:'Griechischer Joghurt',e:'🥣',k:97,p:9,c:3.6,f:5,s:'joghurt griechisch greek yogurt'},
+  {n:'Magerjoghurt',e:'🥣',k:36,p:3.4,c:4.4,f:0.2,s:'joghurt mager fettarm yogurt'},
+  {n:'Magerquark',e:'🥄',k:67,p:12,c:3.3,f:0.5,s:'quark magerquark'},
+  {n:'Speisequark (20%)',e:'🥄',k:95,p:12,c:3.4,f:2,s:'quark speisequark'},
+  {n:'Frischkäse',e:'🧀',k:342,p:6,c:4.1,f:33,s:'frischkäse philadelphia cream cheese'},
+  {n:'Hüttenkäse',e:'🧀',k:72,p:11,c:3.4,f:1.2,s:'hüttenkäse cottage cheese'},
+  {n:'Gouda',e:'🧀',k:356,p:25,c:2.2,f:27,s:'gouda käse cheese'},
+  {n:'Emmentaler',e:'🧀',k:382,p:29,c:0,f:29,s:'emmentaler käse cheese'},
+  {n:'Mozzarella',e:'🧀',k:257,p:18,c:3.1,f:19,s:'mozzarella käse'},
+  {n:'Feta',e:'🧀',k:264,p:14,c:4,f:21,s:'feta käse schafskäse'},
+  {n:'Parmesan',e:'🧀',k:431,p:38,c:0,f:29,s:'parmesan käse'},
+  {n:'Butter',e:'🧈',k:717,p:0.9,c:0.1,f:81,s:'butter'},
+  {n:'Margarine',e:'🧈',k:717,p:0.2,c:0.7,f:80,s:'margarine'},
+  {n:'Sahne (30%)',e:'🥛',k:296,p:2.4,c:2.8,f:30,s:'sahne schlagsahne cream'},
+  {n:'Sauerrahm',e:'🥄',k:213,p:2.5,c:3.4,f:21,s:'sauerrahm sour cream'},
+  {n:'Crème fraîche',e:'🥄',k:292,p:2.4,c:3.6,f:30,s:'crème fraîche'},
+  // ── Hülsenfrüchte & pflanzlich ──
+  {n:'Linsen (gekocht)',e:'🫘',k:116,p:9,c:20,f:0.4,s:'linsen lentils'},
+  {n:'Rote Linsen',e:'🫘',k:116,p:9,c:20,f:0.4,s:'rote linsen red lentils'},
+  {n:'Kichererbsen',e:'🫘',k:139,p:7.5,c:23,f:2.3,s:'kichererbsen chickpeas'},
+  {n:'Kidneybohnen',e:'🫘',k:127,p:8.7,c:22,f:0.5,s:'kidneybohnen bohnen beans'},
+  {n:'Schwarze Bohnen',e:'🫘',k:132,p:8.9,c:24,f:0.5,s:'schwarze bohnen black beans'},
+  {n:'Weiße Bohnen',e:'🫘',k:127,p:8.8,c:22,f:0.5,s:'weiße bohnen white beans'},
+  {n:'Tofu (natur)',e:'🧆',k:76,p:8,c:1.9,f:4.8,s:'tofu'},
+  {n:'Tempeh',e:'🧆',k:193,p:19,c:9.4,f:11,s:'tempeh'},
+  {n:'Seitan',e:'🧆',k:120,p:25,c:2,f:1.5,s:'seitan'},
+  // ── Nüsse & Samen ──
+  {n:'Mandeln',e:'🥜',k:579,p:21,c:22,f:50,s:'mandeln almonds'},
+  {n:'Walnüsse',e:'🥜',k:654,p:15,c:14,f:65,s:'walnüsse walnuts'},
+  {n:'Cashews',e:'🥜',k:553,p:18,c:30,f:44,s:'cashews cashewnüsse'},
+  {n:'Erdnüsse',e:'🥜',k:567,p:26,c:16,f:49,s:'erdnüsse peanuts'},
+  {n:'Erdnussbutter',e:'🥜',k:588,p:25,c:20,f:50,s:'erdnussbutter peanut butter'},
+  {n:'Haselnüsse',e:'🥜',k:628,p:15,c:17,f:61,s:'haselnüsse hazelnuts'},
+  {n:'Macadamia',e:'🥜',k:718,p:7.9,c:14,f:76,s:'macadamia nüsse'},
+  {n:'Pistazie',e:'🥜',k:562,p:20,c:28,f:45,s:'pistazien pistachios'},
+  {n:'Sonnenblumenkerne',e:'🌻',k:584,p:21,c:20,f:51,s:'sonnenblumenkerne'},
+  {n:'Kürbiskerne',e:'🌰',k:559,p:30,c:11,f:49,s:'kürbiskerne pumpkin seeds'},
+  {n:'Chiasamen',e:'🌱',k:486,p:17,c:42,f:31,s:'chiasamen chia seeds'},
+  {n:'Leinsamen',e:'🌱',k:534,p:18,c:29,f:42,s:'leinsamen flaxseed'},
+  {n:'Sesam',e:'🌱',k:573,p:18,c:23,f:50,s:'sesam sesame'},
+  {n:'Hanfsamen',e:'🌱',k:553,p:32,c:8.7,f:49,s:'hanfsamen hemp seeds'},
+  // ── Öle & Fette ──
+  {n:'Olivenöl',e:'🫙',k:884,p:0,c:0,f:100,s:'olivenöl olive oil'},
+  {n:'Rapsöl',e:'🫙',k:884,p:0,c:0,f:100,s:'rapsöl rapeseed oil'},
+  {n:'Kokosöl',e:'🫙',k:862,p:0,c:0,f:100,s:'kokosöl coconut oil'},
+  {n:'Mayonnaise',e:'🫙',k:680,p:1.3,c:1.8,f:75,s:'mayonnaise mayo'},
+  {n:'Hummus',e:'🫙',k:166,p:8,c:14,f:10,s:'hummus'},
+  {n:'Pesto',e:'🌿',k:476,p:5.9,c:5.1,f:49,s:'pesto'},
+  {n:'Tomatensauce',e:'🍅',k:68,p:2.7,c:9.7,f:2.3,s:'tomatensauce sugo'},
+  {n:'Tomatenmark',e:'🍅',k:82,p:4.2,c:15,f:0.4,s:'tomatenmark'},
+  {n:'Ketchup',e:'🍅',k:112,p:1.5,c:27,f:0.1,s:'ketchup'},
+  {n:'Senf',e:'🌭',k:60,p:3.8,c:5.4,f:3.3,s:'senf mustard'},
+  {n:'Sojasauce',e:'🫙',k:60,p:5.6,c:8.3,f:0.1,s:'sojasauce soy sauce'},
+  // ── Protein & Sport ──
+  {n:'Whey Protein',e:'💪',k:380,p:75,c:10,f:4,s:'whey protein pulver'},
+  {n:'Casein Protein',e:'💪',k:370,p:80,c:5,f:2,s:'casein protein'},
+  {n:'Proteinriegel',e:'💪',k:370,p:30,c:40,f:8,s:'proteinriegel protein bar'},
+  // ── Süßes & Snacks ──
+  {n:'Schokolade (70%)',e:'🍫',k:598,p:8,c:46,f:43,s:'schokolade dark chocolate'},
+  {n:'Vollmilchschokolade',e:'🍫',k:535,p:8,c:57,f:30,s:'schokolade vollmilch milk chocolate'},
+  {n:'Nutella',e:'🍫',k:539,p:6.3,c:57,f:31,s:'nutella'},
+  {n:'Chips',e:'🥔',k:536,p:7,c:53,f:35,s:'chips crisps'},
+  {n:'Popcorn',e:'🍿',k:387,p:13,c:74,f:4,s:'popcorn'},
+  {n:'Keks',e:'🍪',k:458,p:6.2,c:72,f:16,s:'keks cookie biscuit'},
+  {n:'Honig',e:'🍯',k:304,p:0.3,c:82,f:0,s:'honig honey'},
+  {n:'Marmelade',e:'🍓',k:278,p:0.4,c:69,f:0.1,s:'marmelade jam'},
+  {n:'Ahornsirup',e:'🍯',k:260,p:0,c:67,f:0.1,s:'ahornsirup maple syrup'},
+  // ── Fertiggerichte (Schätzwerte) ──
+  {n:'Pizza Margherita',e:'🍕',k:266,p:11,c:33,f:10,s:'pizza margherita'},
+  {n:'Hamburger',e:'🍔',k:295,p:17,c:24,f:14,s:'hamburger burger'},
+  {n:'Pommes Frites',e:'🍟',k:312,p:3.4,c:41,f:15,s:'pommes frites french fries'},
+  {n:'Döner',e:'🥙',k:250,p:15,c:25,f:10,s:'döner kebab'},
+  {n:'Sushi (Maki)',e:'🍣',k:143,p:5.3,c:27,f:1.4,s:'sushi maki'},
+  {n:'Burritos',e:'🌯',k:217,p:10,c:30,f:6,s:'burrito wrap'},
+  {n:'Wrap',e:'🌯',k:217,p:10,c:30,f:6,s:'wrap burrito'},
+  // ── Getränke ──
+  {n:'Kaffee (schwarz)',e:'☕',k:2,p:0.3,c:0,f:0,s:'kaffee coffee'},
+  {n:'Espresso',e:'☕',k:9,p:0.6,c:0,f:0.2,s:'espresso kaffee'},
+  {n:'Cappuccino',e:'☕',k:40,p:1.6,c:4,f:1.8,s:'cappuccino kaffee'},
+  {n:'Latte Macchiato',e:'☕',k:67,p:3.3,c:6.5,f:3.5,s:'latte macchiato kaffee'},
+  {n:'Tee (ungesüßt)',e:'🍵',k:1,p:0,c:0.2,f:0,s:'tee tea'},
+  {n:'Orangensaft',e:'🧃',k:45,p:0.7,c:10,f:0.2,s:'orangensaft oj juice'},
+  {n:'Apfelsaft',e:'🧃',k:46,p:0.1,c:11,f:0.1,s:'apfelsaft juice'},
+  {n:'Cola',e:'🥤',k:42,p:0,c:10.6,f:0,s:'cola coke'},
+  {n:'Cola Zero',e:'🥤',k:0,p:0,c:0,f:0,s:'cola zero diet coke'},
+  {n:'Bier (5%)',e:'🍺',k:43,p:0.5,c:3.5,f:0,s:'bier beer'},
+  {n:'Rotwein',e:'🍷',k:85,p:0.1,c:2.6,f:0,s:'rotwein wein wine'},
+  {n:'Weißwein',e:'🍷',k:82,p:0.1,c:2.6,f:0,s:'weißwein wein wine'},
+  {n:'Prosecco',e:'🥂',k:80,p:0.3,c:2.5,f:0,s:'prosecco sekt'},
+  {n:'Protein Shake',e:'💪',k:120,p:20,c:8,f:1,s:'protein shake'},
 ];
 
 // ═══ STATE ═══
@@ -572,9 +761,10 @@ function setMode(mode){
   document.getElementById('addSec').classList.add('hidden');
   selFood=null;
   if(!isOnline&&mode==='online'){
-    document.getElementById('searchRes').innerHTML='<div class="nr">⚠️ Kein Internet.<br>Nutze <b>Gespeichert</b> oder <b>Lokal</b>.</div>';
+    document.getElementById('searchRes').innerHTML='<div class="nr">⚠️ Kein Internet.<br>Nutze <b>Meine</b> oder <b>Lebensmittel</b>.</div>';
   }
   if(mode==='saved') showSaved('');
+  if(mode==='offline') doOffline(document.getElementById('searchQ').value||'');
 }
 
 function openSearch(meal){
@@ -585,7 +775,7 @@ function openSearch(meal){
   document.getElementById('amtInp').value=100;
   var t={breakfast:'Frühstück',lunch:'Mittagessen',dinner:'Abendessen',snack:'Snack'};
   document.getElementById('searchTitle').textContent=t[meal]+' – Lebensmittel';
-  if(!isOnline) setMode('saved'); else setMode('online');
+  setMode('offline');
   openOv('searchOv');
   setTimeout(function(){ document.getElementById('searchQ').focus(); },350);
 }
@@ -597,31 +787,65 @@ function doSearch(){
   else doOnline(q);
 }
 
+// ── Fuzzy search helper ──
+function fuzzyMatch(item, q){
+  var ql=q.toLowerCase().trim();
+  var name=item.n.toLowerCase();
+  var synonyms=(item.s||'').toLowerCase();
+  // Exact match scores highest
+  if(name===ql) return 4;
+  // Name starts with query
+  if(name.startsWith(ql)) return 3;
+  // Any word in name starts with query
+  var words=name.split(/\s+/);
+  for(var i=0;i<words.length;i++) if(words[i].startsWith(ql)) return 2;
+  // Name contains query
+  if(name.includes(ql)) return 1;
+  // Synonyms contain query
+  if(synonyms.includes(ql)) return 1;
+  // Partial match: query starts with name fragment (e.g. "kirsch" matches "kirschen")
+  if(ql.length>=3 && (name.includes(ql.slice(0,-1)) || synonyms.includes(ql.slice(0,-1)))) return 1;
+  return 0;
+}
+
 // ── Saved foods ──
 function showSaved(q){
-  var ql=(q||'').toLowerCase();
+  var ql=(q||'').toLowerCase().trim();
   var cached=Object.values(foodCache);
-  var results=ql
-    ? cached.filter(function(f){ return f.name.toLowerCase().includes(ql); })
-    : cached.sort(function(a,b){ return (b.addedAt||0)-(a.addedAt||0); }).slice(0,20);
+  var results;
+  if(ql){
+    results=cached.filter(function(f){
+      var n=f.name.toLowerCase();
+      return n.includes(ql)||n.startsWith(ql);
+    });
+  } else {
+    results=cached.sort(function(a,b){ return (b.addedAt||0)-(a.addedAt||0); }).slice(0,20);
+  }
   selFood=null; document.getElementById('addSec').classList.add('hidden');
   if(!results.length){
-    document.getElementById('searchRes').innerHTML='<div class="nr">Noch keine gespeicherten Lebensmittel.<br>Füge online Lebensmittel hinzu – sie werden automatisch hier gespeichert.</div>';
+    document.getElementById('searchRes').innerHTML='<div class="nr">Noch keine gespeicherten Lebensmittel.<br>Füge Lebensmittel hinzu – sie werden automatisch gespeichert.</div>';
     return;
   }
   srchProducts=results.map(function(f){ return {name:f.name,emoji:f.emoji,per100:f.per100}; });
   renderResults();
 }
 
-// ── Built-in offline ──
+// ── Built-in local search (fuzzy) ──
 function doOffline(q){
-  if(!q){ document.getElementById('searchRes').innerHTML='<div class="nr">Suchbegriff eingeben</div>'; return; }
-  var ql=q.toLowerCase();
-  srchProducts=BUILTIN.filter(function(f){ return f.n.toLowerCase().includes(ql); }).slice(0,12).map(function(f){
-    return {name:f.n,emoji:f.e,per100:{kcal:f.k,protein:f.p,carbs:f.c,fat:f.f}};
+  var scored=[];
+  if(!q){
+    srchProducts=BUILTIN.slice(0,20).map(function(f){ return {name:f.n,emoji:f.e,per100:{kcal:f.k,protein:f.p,carbs:f.c,fat:f.f}}; });
+    selFood=null; document.getElementById('addSec').classList.add('hidden');
+    renderResults(); return;
+  }
+  BUILTIN.forEach(function(f){
+    var score=fuzzyMatch(f,q);
+    if(score>0) scored.push({score:score,item:{name:f.n,emoji:f.e,per100:{kcal:f.k,protein:f.p,carbs:f.c,fat:f.f}}});
   });
+  scored.sort(function(a,b){ return b.score-a.score; });
+  srchProducts=scored.slice(0,12).map(function(x){ return x.item; });
   selFood=null; document.getElementById('addSec').classList.add('hidden');
-  if(!srchProducts.length){ document.getElementById('searchRes').innerHTML='<div class="nr">Kein Ergebnis.</div>'; return; }
+  if(!srchProducts.length){ document.getElementById('searchRes').innerHTML='<div class="nr">Kein Ergebnis in lokaler Datenbank.</div>'; return; }
   renderResults();
 }
 
@@ -639,10 +863,14 @@ function doOnline(q){
   var ql=q.toLowerCase().trim();
   var eng=DE_EN[ql]||null;
 
-  // Always show local DB matches first (instant)
-  var localMatches=BUILTIN.filter(function(f){ return f.n.toLowerCase().includes(ql); }).slice(0,3).map(function(f){
-    return {name:f.n,emoji:f.e,per100:{kcal:f.k,protein:f.p,carbs:f.c,fat:f.f},isLocal:true};
+  // Always show local DB matches first using fuzzy search
+  var localScored=[];
+  BUILTIN.forEach(function(f){
+    var score=fuzzyMatch(f,q);
+    if(score>0) localScored.push({score:score,item:{name:f.n,emoji:f.e,per100:{kcal:f.k,protein:f.p,carbs:f.c,fat:f.f},isLocal:true}});
   });
+  localScored.sort(function(a,b){ return b.score-a.score; });
+  var localMatches=localScored.slice(0,3).map(function(x){ return x.item; });
 
   var proxy='https://corsproxy.io/?';
   var baseUrl='https://world.openfoodfacts.org/cgi/search.pl?search_simple=1&action=process&json=1&page_size=24&fields=product_name,product_name_de,nutriments';
