@@ -726,7 +726,6 @@ var foodCache={};   // user's saved foods (from online/photo/chat)
 var customFoods=[]; // user-created custom foods
 var curMeal='breakfast', selFood=null, photoB64=null, aiDetected=[], chatDetected=[];
 var isOnline=navigator.onLine;
-var onlineSearchTimer=null;
 
 // ══════════════════════════════════════
 // DATE HELPERS (timezone-safe)
@@ -924,16 +923,13 @@ function doSearch(){
   selFood=null;document.getElementById('addSec').classList.add('hidden');
   onlineLoaded=false;
 
-  // 1. Show local results immediately
+  // 1. Show local results immediately (no data usage)
   var local=searchLocal(q);
   srchProducts=local.slice();
   renderSearchResults(srchProducts,!!q&&isOnline);
 
-  // 2. If online and query exists, fetch online and merge
-  if(q&&isOnline){
-    if(onlineSearchTimer)clearTimeout(onlineSearchTimer);
-    onlineSearchTimer=setTimeout(function(){fetchOnline(q);},300);
-  }
+  // 2. Online search only on explicit button/enter press
+  if(q&&isOnline) fetchOnline(q);
 }
 
 function fetchOnline(q){
@@ -1079,11 +1075,23 @@ function handlePhoto(e){
   var file=e.target.files[0];if(!file)return;
   var reader=new FileReader();
   reader.onload=function(ev){
-    photoB64=ev.target.result.split(',')[1];
-    document.getElementById('pPrev').src=ev.target.result;
-    document.getElementById('photoPreviewWrap').classList.remove('hidden');
-    document.getElementById('photoPickArea').style.display='none';
-    document.getElementById('aBtn').disabled=false;
+    // Komprimierung: max 800px, 70% JPEG = ~100-200KB statt 4-8MB
+    var img=new Image();
+    img.onload=function(){
+      var canvas=document.createElement('canvas');
+      var MAX=800,w=img.width,h=img.height;
+      if(w>h){if(w>MAX){h=Math.round(h*MAX/w);w=MAX;}}
+      else{if(h>MAX){w=Math.round(w*MAX/h);h=MAX;}}
+      canvas.width=w;canvas.height=h;
+      canvas.getContext('2d').drawImage(img,0,0,w,h);
+      var compressed=canvas.toDataURL('image/jpeg',0.7);
+      photoB64=compressed.split(',')[1];
+      document.getElementById('pPrev').src=compressed;
+      document.getElementById('photoPreviewWrap').classList.remove('hidden');
+      document.getElementById('photoPickArea').style.display='none';
+      document.getElementById('aBtn').disabled=false;
+    };
+    img.src=ev.target.result;
   };
   reader.readAsDataURL(file);
 }
