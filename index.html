@@ -395,30 +395,93 @@ button,input,select,textarea{font-family:'Nunito Sans',sans-serif;cursor:pointer
 <div class="ov" id="photoOv" onclick="bgClose(event,'photoOv')">
   <div class="mod">
     <div class="mhan"></div>
-    <div class="mhd"><button type="button" class="mcl" onclick="closeOv('photoOv')">✕</button><div class="mti">Foto analysieren</div><div class="msu">KI erstellt Rezept aus dem Foto</div></div>
+    <div class="mhd"><button type="button" class="mcl" onclick="closeOv('photoOv')">✕</button><div class="mti" id="pModalTitle">Foto &amp; Rezept</div><div class="msu" id="pModalSub">Foto aufnehmen oder aus Galerie wählen</div></div>
     <div class="mbd">
-      <div id="pPickArea"><div class="pbtns"><button type="button" class="pbtn" onclick="document.getElementById('pCam').click()"><span>📷</span>Kamera</button><button type="button" class="pbtn" onclick="document.getElementById('pGal').click()"><span>🖼️</span>Galerie</button></div></div>
-      <input type="file" id="pCam" accept="image/*" capture="environment" style="display:none" onchange="handlePhoto(event)">
-      <input type="file" id="pGal" accept="image/*" style="display:none" onchange="handlePhoto(event)">
-      <div id="pPrevWrap" class="pprev-wrap hidden"><img id="pPrev"><button type="button" class="pchange" onclick="resetPhoto()">Ändern</button></div>
-      <div style="margin-bottom:12px;"><label class="lbl" style="margin-bottom:5px;">Mahlzeit</label>
-        <select class="sinp" id="pMeal"><option value="breakfast">🌅 Frühstück</option><option value="lunch">☀️ Mittagessen</option><option value="dinner">🌙 Abendessen</option><option value="snack">🍎 Snack</option></select>
+      <!-- Step 0: Meal + name -->
+      <div style="display:flex;gap:8px;margin-bottom:10px;">
+        <select class="sinp" id="pMeal" style="flex:1;"><option value="breakfast">🌅 Frühstück</option><option value="lunch">☀️ Mittagessen</option><option value="dinner">🌙 Abendessen</option><option value="snack">🍎 Snack</option></select>
       </div>
-      <button type="button" class="abt" id="aBtn" disabled>📷 KI-Analyse starten</button>
-      <div id="photoRecArea" class="hidden" style="margin-top:12px;">
-        <div class="panel">
-          <div class="panel-title">✨ Erkanntes Rezept</div>
-          <input type="text" class="finp" id="pRecName" placeholder="Rezeptname">
+      <input type="text" class="finp" id="pRecName" placeholder="Rezeptname (optional)" style="margin-bottom:10px;">
+
+      <!-- Ingredient list (grows as items are added) -->
+      <div id="pIngArea" class="hidden">
+        <div class="panel" style="margin-bottom:10px;">
+          <div class="panel-title">📋 Zutaten im Rezept</div>
           <div id="pIngList" class="ing-list"></div>
           <div id="pRecTotal" class="rec-total"></div>
-        <div style="display:flex;gap:6px;margin-bottom:4px;">
-          <input type="text" class="finp" id="pAddMore" placeholder="Weitere Zutat hinzufügen..." style="margin:0;flex:1;font-size:13px;padding:8px 10px;" onkeydown="if(event.key==='Enter')addMoreToPhoto()">
-          <button type="button" id="pAddMoreBtn" onclick="addMoreToPhoto()" style="background:var(--g2);color:white;border:none;border-radius:9px;padding:8px 12px;font-size:13px;font-weight:700;white-space:nowrap;display:flex;align-items:center;gap:4px;">＋ KI</button>
         </div>
+        <div class="ar" style="margin-top:0;margin-bottom:12px;">
+          <input type="number" class="ai2" id="pPortions" value="1" min="0.1" step="0.1">
+          <div class="au">Portion(en)</div>
         </div>
-        <div class="ar" style="margin-top:0;"><input type="number" class="ai2" id="pPortions" value="1" min="0.1" step="0.1"><div class="au">Portion(en)</div></div>
-        <button type="button" class="cb2" onclick="addPhotoRecipe()">Als Rezept speichern &amp; eintragen</button>
+        <button type="button" class="cb2" style="margin-bottom:12px;" onclick="addPhotoRecipe()">💾 Rezept speichern &amp; eintragen</button>
+        <div style="border-top:1px solid var(--br);padding-top:10px;margin-bottom:8px;font-size:12px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;">Weitere Zutat hinzufügen</div>
       </div>
+
+      <!-- Add method buttons (always visible after first item) -->
+      <div id="pMethodBtns" class="hidden">
+        <div class="qbtns" style="margin-bottom:10px;">
+          <button type="button" class="qbtn" onclick="pShowMethod('foto')"><span>📷</span>Foto</button>
+          <button type="button" class="qbtn" onclick="pShowMethod('chat')"><span>💬</span>KI-Chat</button>
+          <button type="button" class="qbtn" onclick="pShowMethod('search')"><span>🔍</span>Suche</button>
+          <button type="button" class="qbtn" onclick="pShowMethod('barcode')"><span>📊</span>Barcode</button>
+        </div>
+      </div>
+
+      <!-- Foto sub-panel -->
+      <div id="pFotoPanel">
+        <div id="pPickArea"><div class="pbtns"><button type="button" class="pbtn" onclick="document.getElementById('pCam').click()"><span>📷</span>Kamera</button><button type="button" class="pbtn" onclick="document.getElementById('pGal').click()"><span>🖼️</span>Galerie</button></div></div>
+        <input type="file" id="pCam" accept="image/*" capture="environment" style="display:none" onchange="handlePhoto(event)">
+        <input type="file" id="pGal" accept="image/*" style="display:none" onchange="handlePhoto(event)">
+        <div id="pPrevWrap" class="pprev-wrap hidden">
+          <img id="pPrev">
+          <button type="button" class="pchange" onclick="resetPhotoPanel()">Ändern</button>
+        </div>
+        <button type="button" class="abt" id="aBtn" disabled style="margin-bottom:10px;">📷 Analysieren</button>
+      </div>
+
+      <!-- Barcode confirm dialog -->
+      <div id="pBarcodeConfirm" class="hidden" style="background:var(--gl);border:1.5px solid var(--g3);border-radius:12px;padding:13px;margin-bottom:10px;">
+        <div style="font-weight:700;font-size:14px;margin-bottom:4px;" id="pBarcodeFoundName"></div>
+        <div style="font-size:12px;color:var(--mu);margin-bottom:10px;" id="pBarcodeFoundNutrients"></div>
+        <div style="display:flex;gap:8px;">
+          <button type="button" class="fsave" style="flex:1;" onclick="pConfirmBarcode(true)">✓ Ja, korrekt</button>
+          <button type="button" class="fsave" style="flex:1;background:var(--mu);" onclick="pConfirmBarcode(false)">✕ Nein, KI nutzen</button>
+        </div>
+      </div>
+
+      <!-- Chat sub-panel -->
+      <div id="pChatPanel" class="hidden">
+        <div style="display:flex;gap:6px;margin-bottom:8px;">
+          <input type="text" class="finp" id="pChatInp" placeholder="Zutat beschreiben..." style="margin:0;flex:1;" onkeydown="if(event.key==='Enter')pSendChat()">
+          <button type="button" id="pChatBtn" onclick="pSendChat()" style="background:var(--g2);color:white;border:none;border-radius:9px;padding:9px 12px;font-weight:700;font-size:13px;">➤</button>
+        </div>
+      </div>
+
+      <!-- Search sub-panel -->
+      <div id="pSearchPanel" class="hidden">
+        <div style="display:flex;gap:6px;margin-bottom:8px;">
+          <input type="text" class="finp" id="pSearchInp" placeholder="Lebensmittel suchen..." style="margin:0;flex:1;" onkeydown="if(event.key==='Enter')pDoSearch()">
+          <button type="button" onclick="pDoSearch()" style="background:var(--g2);color:white;border:none;border-radius:9px;padding:9px 12px;font-weight:700;font-size:13px;">Suchen</button>
+        </div>
+        <div id="pSearchRes" class="rl" style="max-height:200px;overflow-y:auto;"></div>
+      </div>
+
+      <!-- Barcode sub-panel -->
+      <div id="pBarcodePanel" class="hidden">
+        <div id="pBarcodeWrap" class="barcode-wrap hidden">
+          <video id="pBarcodeVideo" playsinline></video>
+          <div class="barcode-overlay">
+            <div style="width:70%;height:50%;border:2px solid var(--g2);border-radius:8px;position:relative;">
+              <div class="barcode-line"></div>
+            </div>
+          </div>
+          <div class="barcode-hint">Barcode in den Rahmen halten</div>
+        </div>
+        <button type="button" id="pBarStartBtn" class="fsave" onclick="pStartBarcode()">▶ Barcode scannen</button>
+        <button type="button" id="pBarStopBtn" class="fsave" style="background:#555;display:none;" onclick="pStopBarcode()">■ Stoppen</button>
+      </div>
+
     </div>
   </div>
 </div>
@@ -461,6 +524,65 @@ button,input,select,textarea{font-family:'Nunito Sans',sans-serif;cursor:pointer
     <div class="mhan"></div>
     <div class="mhd"><button type="button" class="mcl" onclick="closeOv('editOv')">✕</button><div class="mti" id="editTitle">Bearbeiten</div></div>
     <div class="mbd" id="editBody"></div>
+  </div>
+</div>
+
+<!-- EDIT RECIPE MODAL -->
+<div class="ov" id="editRecOv" onclick="bgClose(event,'editRecOv')">
+  <div class="mod">
+    <div class="mhan"></div>
+    <div class="mhd"><button type="button" class="mcl" onclick="closeOv('editRecOv')">✕</button><div class="mti" id="editRecTitle">Rezept bearbeiten</div></div>
+    <div class="mbd">
+      <input type="text" class="finp" id="editRecName" placeholder="Rezeptname" style="margin-bottom:10px;">
+      <label class="lbl">Zutaten</label>
+      <div id="editRecIngList" class="ing-list" style="margin-bottom:8px;"></div>
+      <div id="editRecTotal" class="rec-total" style="margin-bottom:10px;"></div>
+      <!-- Add ingredient methods -->
+      <div style="border-top:1px solid var(--br);padding-top:10px;margin-bottom:8px;font-size:12px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;">Zutat hinzufügen</div>
+      <div class="qbtns" style="margin-bottom:8px;">
+        <button type="button" class="qbtn" onclick="erShowMethod('search')"><span>🔍</span>Suche</button>
+        <button type="button" class="qbtn" onclick="erShowMethod('chat')"><span>💬</span>KI-Chat</button>
+        <button type="button" class="qbtn" onclick="erShowMethod('foto')"><span>📷</span>Foto</button>
+        <button type="button" class="qbtn" onclick="erShowMethod('barcode')"><span>📊</span>Barcode</button>
+      </div>
+      <!-- Search -->
+      <div id="erSearchPanel" class="hidden">
+        <div style="display:flex;gap:6px;margin-bottom:8px;">
+          <input type="text" class="finp" id="erSearchInp" placeholder="Suchen..." style="margin:0;flex:1;" onkeydown="if(event.key==='Enter')erDoSearch()">
+          <button type="button" onclick="erDoSearch()" style="background:var(--g2);color:white;border:none;border-radius:9px;padding:9px 12px;font-weight:700;font-size:13px;">Suchen</button>
+        </div>
+        <div id="erSearchRes" class="rl" style="max-height:160px;overflow-y:auto;margin-bottom:8px;"></div>
+      </div>
+      <!-- Chat -->
+      <div id="erChatPanel" class="hidden">
+        <div style="display:flex;gap:6px;margin-bottom:8px;">
+          <input type="text" class="finp" id="erChatInp" placeholder="Zutat beschreiben..." style="margin:0;flex:1;" onkeydown="if(event.key==='Enter')erSendChat()">
+          <button type="button" id="erChatBtn" onclick="erSendChat()" style="background:var(--g2);color:white;border:none;border-radius:9px;padding:9px 12px;font-weight:700;font-size:13px;">➤</button>
+        </div>
+      </div>
+      <!-- Foto -->
+      <div id="erFotoPanel" class="hidden">
+        <div class="pbtns" style="margin-bottom:8px;">
+          <button type="button" class="pbtn" onclick="document.getElementById('erCam').click()"><span>📷</span>Kamera</button>
+          <button type="button" class="pbtn" onclick="document.getElementById('erGal').click()"><span>🖼️</span>Galerie</button>
+        </div>
+        <input type="file" id="erCam" accept="image/*" capture="environment" style="display:none" onchange="erHandlePhoto(event)">
+        <input type="file" id="erGal" accept="image/*" style="display:none" onchange="erHandlePhoto(event)">
+        <div id="erAnalyzing" class="hidden" style="text-align:center;font-size:13px;color:var(--mu);padding:8px;">KI analysiert...</div>
+      </div>
+      <!-- Barcode -->
+      <div id="erBarcodePanel" class="hidden">
+        <div id="erBarcodeWrap" class="barcode-wrap hidden">
+          <video id="erBarcodeVideo" playsinline></video>
+          <div class="barcode-overlay"><div style="width:70%;height:50%;border:2px solid var(--g2);border-radius:8px;position:relative;"><div class="barcode-line"></div></div></div>
+          <div class="barcode-hint">Barcode in den Rahmen halten</div>
+        </div>
+        <button type="button" id="erBarStartBtn" class="fsave" onclick="erStartBarcode()">▶ Barcode scannen</button>
+        <button type="button" id="erBarStopBtn" class="fsave" style="background:#555;display:none;" onclick="erStopBarcode()">■ Stoppen</button>
+      </div>
+      <button type="button" class="cb2" style="margin-top:10px;" onclick="saveEditedRecipe()">💾 Rezept speichern</button>
+      <button type="button" class="del-btn" onclick="deleteEditedRecipe()">🗑️ Rezept löschen</button>
+    </div>
   </div>
 </div>
 
@@ -737,12 +859,14 @@ function updateIngAmt(pfx,i,v){
   else if(pfx==='rec'){recIng[i].amount=val;updateRecTotal();}
   else if(pfx==='pi'){pIng[i].amount=val;updatePhotoTotal();}
   else if(pfx==='ci'){cIng[i].amount=val;updateChatTotal();}
+  else if(pfx==='er'){updateIngAmt_er(i,v);}
 }
 function removeIng(pfx,i){
   if(pfx==='ee'){var e=getDay().meals[editM][editI];if(e.ingredients){e.ingredients.splice(i,1);renderEditBody(e);}}
   else if(pfx==='rec'){recIng.splice(i,1);renderRecBuilder();}
   else if(pfx==='pi'){pIng.splice(i,1);renderPhotoIng();}
   else if(pfx==='ci'){cIng.splice(i,1);renderChatIng();}
+  else if(pfx==='er'){var rec=recipes.find(function(r){return r.id===_editRecId;});if(rec){rec.ingredients.splice(i,1);renderEditRecIng(rec.ingredients);}}
 }
 function openAddIngToEntry(){addIngToEntry=true;closeOv('editOv');openSearch(editM);}
 function saveEditEntry(){
@@ -1046,30 +1170,51 @@ function addIngToExistingEntry(food){
   openEditEntry(editM,editI);
 }
 
-// ═══════════ PHOTO ═══════════
-function mealByTime(){
-  var h=new Date().getHours();
-  if(h>=5&&h<11)return'breakfast';
-  if(h>=11&&h<14)return'lunch';
-  if(h>=14&&h<18)return'snack';
-  return'dinner';
-}
+// ═══════════ PHOTO + RECIPE BUILDER ═══════════
+var _pBarcodeFound=null; // holds barcode result pending confirm
+var _pBarcodeReader=null;
+var _pBarcodeActive=false;
+
 function openPhoto(){
   pIng=[];
-  document.getElementById('pPrevWrap').classList.add('hidden');
+  _pBarcodeFound=null;
+  // Reset all panels
   document.getElementById('pPickArea').style.display='block';
-  document.getElementById('aBtn').disabled=true;document.getElementById('aBtn').textContent='📷 KI-Analyse starten';
-  document.getElementById('photoRecArea').classList.add('hidden');
-  document.getElementById('pCam').value='';document.getElementById('pGal').value='';
+  document.getElementById('pPrevWrap').classList.add('hidden');
+  document.getElementById('aBtn').disabled=true;
+  document.getElementById('aBtn').textContent='📷 Analysieren';
+  document.getElementById('pIngArea').classList.add('hidden');
+  document.getElementById('pMethodBtns').classList.add('hidden');
+  document.getElementById('pBarcodeConfirm').classList.add('hidden');
+  document.getElementById('pFotoPanel').classList.remove('hidden');
+  document.getElementById('pChatPanel').classList.add('hidden');
+  document.getElementById('pSearchPanel').classList.add('hidden');
+  document.getElementById('pBarcodePanel').classList.add('hidden');
+  document.getElementById('pCam').value='';
+  document.getElementById('pGal').value='';
+  document.getElementById('pRecName').value='';
+  document.getElementById('pIngList').innerHTML='';
+  document.getElementById('pRecTotal').innerHTML='';
+  document.getElementById('pModalTitle').textContent='Foto & Rezept';
+  document.getElementById('pModalSub').textContent='Foto aufnehmen oder aus Galerie wählen';
   document.getElementById('pMeal').value=mealByTime();
+  pStopBarcode();
   openOv('photoOv');
 }
-function resetPhoto(){document.getElementById('pPrevWrap').classList.add('hidden');document.getElementById('pPickArea').style.display='block';document.getElementById('aBtn').disabled=true;document.getElementById('photoRecArea').classList.add('hidden');pIng=[];}
+
+function resetPhotoPanel(){
+  document.getElementById('pPrevWrap').classList.add('hidden');
+  document.getElementById('pPickArea').style.display='block';
+  document.getElementById('aBtn').disabled=true;
+  document.getElementById('pBarcodeConfirm').classList.add('hidden');
+  document.getElementById('pCam').value='';
+  document.getElementById('pGal').value='';
+}
+
 function handlePhoto(e){
   var file=e.target.files[0];if(!file)return;
   var reader=new FileReader();
   reader.onload=function(ev){
-    // Compress: max 800px, 70% quality → ~100-200KB instead of 4-8MB
     var img=new Image();
     img.onload=function(){
       var c=document.createElement('canvas'),MAX=800,w=img.width,h=img.height;
@@ -1081,38 +1226,236 @@ function handlePhoto(e){
       document.getElementById('pPrevWrap').classList.remove('hidden');
       document.getElementById('pPickArea').style.display='none';
       document.getElementById('aBtn').disabled=false;
+      // Auto-try barcode detection on still image
+      tryBarcodeOnImage(c);
     };
     img.src=ev.target.result;
   };
   reader.readAsDataURL(file);
 }
+
+function tryBarcodeOnImage(canvas){
+  if(typeof ZXing==='undefined')return;
+  var hints=new Map();
+  hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS,[
+    ZXing.BarcodeFormat.EAN_13,ZXing.BarcodeFormat.EAN_8,
+    ZXing.BarcodeFormat.UPC_A,ZXing.BarcodeFormat.UPC_E,
+    ZXing.BarcodeFormat.CODE_128
+  ]);
+  var reader=new ZXing.BrowserMultiFormatReader(hints);
+  reader.decodeFromCanvas(canvas).then(function(result){
+    if(result){
+      var code=result.getText();
+      fetchBarcodeForConfirm(code);
+    }
+  }).catch(function(){
+    // No barcode found - normal, KI will be used
+  });
+}
+
+function fetchBarcodeForConfirm(code){
+  var cached=barcodeCache[code];
+  if(cached){
+    showBarcodeConfirm(cached);
+    return;
+  }
+  if(!isOnline)return; // no barcode, proceed with KI
+  fetch('https://world.openfoodfacts.org/api/v0/product/'+code+'.json')
+    .then(function(r){return r.json();})
+    .then(function(data){
+      if(data.status!==1||!data.product)return;
+      var p=data.product,nm=p.nutriments||{};
+      var name=p.product_name_de||p.product_name||'Unbekannt';
+      var food={name:name,emoji:emo(name),barcode:code,per100:{kcal:nm['energy-kcal_100g']||0,protein:nm['proteins_100g']||0,carbs:nm['carbohydrates_100g']||0,fat:nm['fat_100g']||0}};
+      barcodeCache[code]=food;saveBarcodeCache();
+      showBarcodeConfirm(food);
+    }).catch(function(){});
+}
+
+function showBarcodeConfirm(food){
+  _pBarcodeFound=food;
+  document.getElementById('pBarcodeFoundName').textContent=(food.emoji||'🍽')+' '+food.name;
+  document.getElementById('pBarcodeFoundNutrients').textContent=Math.round(food.per100.kcal)+' kcal · P'+food.per100.protein+'g · K'+food.per100.carbs+'g · F'+food.per100.fat+'g pro 100g';
+  document.getElementById('pBarcodeConfirm').classList.remove('hidden');
+}
+
+function pConfirmBarcode(yes){
+  document.getElementById('pBarcodeConfirm').classList.add('hidden');
+  if(yes&&_pBarcodeFound){
+    // Add barcode product as ingredient
+    var food=_pBarcodeFound;
+    pIng.push({name:food.name,emoji:food.emoji,amount:100,per100:food.per100});
+    cacheFood(food);
+    _pBarcodeFound=null;
+    pUpdateIngList();
+    showToast((food.emoji||'🍽')+' '+food.name+' hinzugefügt');
+  } else {
+    // User said no or no barcode → run KI analysis
+    _pBarcodeFound=null;
+    doAnalyze();
+  }
+}
+
 function doAnalyze(){
-  if(!window._photoB64){return;}
+  if(!window._photoB64)return;
   if(!isOnline){showToast('Foto-Analyse benötigt Internet');return;}
   var btn=document.getElementById('aBtn');
-  btn.disabled=true;btn.innerHTML='<span style="display:inline-flex;gap:5px;align-items:center;"><span class="spin"></span>Analysiere...</span>';
-  document.getElementById('photoRecArea').classList.add('hidden');
-  // Use claude-haiku-4-5 for cheaper/faster image recognition
-  // Step 1: KI identifies food names + grams only (minimal tokens)
-  var prompt='Photo of food. List all visible ingredients with estimated grams. Reply ONLY JSON array, no markdown:\n[{"name":"English food name","emoji":"emoji","g":150}]\nMax 8 items. Only name and grams, no nutrition.';
+  btn.disabled=true;btn.innerHTML='<span style="display:inline-flex;gap:5px;align-items:center;"><span class="spin"></span>KI analysiert...</span>';
+  var prompt='Photo of food. List all visible ingredients. Reply ONLY JSON array:\n[{"name":"English food name","emoji":"emoji","g":150}]\nOnly name and grams, no nutrition. Max 8 items.';
   callClaude('claude-sonnet-4-5',[{type:'image',source:{type:'base64',media_type:'image/jpeg',data:window._photoB64}},{type:'text',text:prompt}],200,
     function(text){
       try{
-        var match=text.match(/\[[\s\S]*\]/);
-        if(!match)throw new Error('no json');
+        var match=text.match(/\[[\s\S]*\]/);if(!match)throw new Error();
         var raw=JSON.parse(match[0]);
-        // Step 2: look up each food in OFF, fall back to KI estimate
         lookupNutrients(raw,function(resolved){
-          pIng=resolved;
-          btn.disabled=false;btn.textContent='🔄 Neues Foto';btn.onclick=function(){resetPhoto();btn.onclick=doAnalyze;};
-          if(!document.getElementById('pRecName').value)document.getElementById('pRecName').value='Erkanntes Gericht';
-          renderPhotoIng();document.getElementById('photoRecArea').classList.remove('hidden');
+          resolved.forEach(function(item){pIng.push(item);});
+          pUpdateIngList();
+          btn.disabled=false;btn.textContent='📷 Analysieren';
         });
-      }catch(e){showToast('Fehler beim Parsen');btn.disabled=false;btn.textContent='🔄 Erneut';}
+      }catch(e){showToast('Fehler beim Parsen');btn.disabled=false;btn.textContent='📷 Erneut';}
     },
-    function(err){showToast('Fehler: '+err);btn.disabled=false;btn.textContent='🔄 Erneut';}
+    function(err){showToast('Fehler: '+err);btn.disabled=false;btn.textContent='📷 Erneut';}
   );
 }
+
+function pUpdateIngList(){
+  var hasIng=pIng.length>0;
+  document.getElementById('pIngArea').classList.toggle('hidden',!hasIng);
+  document.getElementById('pMethodBtns').classList.toggle('hidden',!hasIng);
+  document.getElementById('pFotoPanel').classList.toggle('hidden',hasIng);
+  if(hasIng){
+    document.getElementById('pModalTitle').textContent='Rezept zusammenstellen';
+    document.getElementById('pModalSub').textContent=pIng.length+' Zutat'+(pIng.length!==1?'en':'');
+  }
+  renderPhotoIng();
+}
+
+function pShowMethod(method){
+  ['pFotoPanel','pChatPanel','pSearchPanel','pBarcodePanel'].forEach(function(id){
+    document.getElementById(id).classList.add('hidden');
+  });
+  if(method==='foto'){
+    document.getElementById('pFotoPanel').classList.remove('hidden');
+    resetPhotoPanel();
+  } else if(method==='chat'){
+    document.getElementById('pChatPanel').classList.remove('hidden');
+    setTimeout(function(){document.getElementById('pChatInp').focus();},100);
+  } else if(method==='search'){
+    document.getElementById('pSearchPanel').classList.remove('hidden');
+    pDoSearch();
+    setTimeout(function(){document.getElementById('pSearchInp').focus();},100);
+  } else if(method==='barcode'){
+    document.getElementById('pBarcodePanel').classList.remove('hidden');
+    pStartBarcode();
+  }
+}
+
+// Photo-modal barcode scanner
+function pStartBarcode(){
+  if(typeof ZXing==='undefined'){showToast('Scanner lädt...');return;}
+  document.getElementById('pBarcodeWrap').classList.remove('hidden');
+  document.getElementById('pBarStartBtn').style.display='none';
+  document.getElementById('pBarStopBtn').style.display='block';
+  _pBarcodeActive=true;
+  var hints=new Map();
+  hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS,[ZXing.BarcodeFormat.EAN_13,ZXing.BarcodeFormat.EAN_8,ZXing.BarcodeFormat.UPC_A,ZXing.BarcodeFormat.UPC_E,ZXing.BarcodeFormat.CODE_128]);
+  _pBarcodeReader=new ZXing.BrowserMultiFormatReader(hints);
+  _pBarcodeReader.decodeFromVideoDevice(null,'pBarcodeVideo',function(result,err){
+    if(!_pBarcodeActive)return;
+    if(result){
+      pStopBarcode();
+      var code=result.getText();
+      pLookupBarcode(code);
+    }
+  });
+}
+function pStopBarcode(){
+  _pBarcodeActive=false;
+  if(_pBarcodeReader){try{_pBarcodeReader.reset();}catch(e){}_pBarcodeReader=null;}
+  var w=document.getElementById('pBarcodeWrap');if(w)w.classList.add('hidden');
+  var s=document.getElementById('pBarStartBtn');if(s)s.style.display='block';
+  var t=document.getElementById('pBarStopBtn');if(t)t.style.display='none';
+}
+function pLookupBarcode(code){
+  showToast('🔍 Suche Barcode...');
+  var cached=barcodeCache[code];
+  if(cached){pAddBarcodeIngredient(cached);return;}
+  if(!isOnline){showToast('Offline – Barcode nicht im Cache');return;}
+  fetch('https://world.openfoodfacts.org/api/v0/product/'+code+'.json')
+    .then(function(r){return r.json();})
+    .then(function(data){
+      if(data.status!==1||!data.product){showToast('Produkt nicht gefunden');return;}
+      var p=data.product,nm=p.nutriments||{};
+      var name=p.product_name_de||p.product_name||'Unbekannt';
+      var food={name:name,emoji:emo(name),barcode:code,per100:{kcal:nm['energy-kcal_100g']||0,protein:nm['proteins_100g']||0,carbs:nm['carbohydrates_100g']||0,fat:nm['fat_100g']||0}};
+      barcodeCache[code]=food;saveBarcodeCache();
+      pAddBarcodeIngredient(food);
+    }).catch(function(){showToast('Fehler beim Laden');});
+}
+function pAddBarcodeIngredient(food){
+  pIng.push({name:food.name,emoji:food.emoji,amount:100,per100:food.per100});
+  cacheFood(food);
+  pUpdateIngList();
+  pShowMethod('foto');
+  showToast((food.emoji||'🍽')+' '+food.name+' hinzugefügt');
+}
+
+// Chat in photo modal
+function pSendChat(){
+  var msg=document.getElementById('pChatInp').value.trim();if(!msg)return;
+  if(!isOnline){showToast('Internet benötigt');return;}
+  var btn=document.getElementById('pChatBtn');
+  btn.innerHTML='<span class="spin"></span>';btn.disabled=true;
+  var prompt='Food item: '+msg+'\nReply ONLY JSON array:\n[{"name":"German name","emoji":"emoji","g":100}]\nOne item, only name and grams.';
+  callClaude('claude-haiku-4-5',[{type:'text',text:prompt}],100,
+    function(text){
+      try{
+        var match=text.match(/\[[\s\S]*\]/);if(!match)throw new Error();
+        var raw=JSON.parse(match[0]);
+        lookupNutrients(raw,function(resolved){
+          resolved.forEach(function(i){pIng.push(i);});
+          pUpdateIngList();
+          document.getElementById('pChatInp').value='';
+          btn.innerHTML='➤';btn.disabled=false;
+          showToast('✓ Zutat hinzugefügt');
+        });
+      }catch(e){showToast('Fehler');btn.innerHTML='➤';btn.disabled=false;}
+    },
+    function(err){showToast('Fehler: '+err);btn.innerHTML='➤';btn.disabled=false;}
+  );
+}
+
+// Search in photo modal
+function pDoSearch(){
+  var q=document.getElementById('pSearchInp').value.trim();
+  var results=[];
+  var seen={};
+  customFoods.forEach(function(f){if(!seen[f.name.toLowerCase()]){seen[f.name.toLowerCase()]=true;results.push({name:f.name,emoji:f.emoji,per100:f.per100});}});
+  DB.forEach(function(f){var s=fuzzy(f,q);if((s>0||!q)&&!seen[f.n.toLowerCase()]){seen[f.n.toLowerCase()]=true;results.push({name:f.n,emoji:f.e,per100:{kcal:f.k,protein:f.p,carbs:f.c,fat:f.f},score:s});}});
+  if(q)results.sort(function(a,b){return(b.score||0)-(a.score||0);});
+  results=results.slice(0,12);
+  var el=document.getElementById('pSearchRes');
+  if(!results.length){el.innerHTML='<div class="nr" style="padding:10px;">Kein Ergebnis</div>';return;}
+  el.innerHTML=results.map(function(p,i){
+    return'<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:1.5px solid var(--br);border-radius:10px;cursor:pointer;margin-bottom:5px;background:white;" onclick="pAddSearchResult('+i+')">'
+      +'<div style="font-size:20px;">'+(p.emoji||'🍽')+'</div>'
+      +'<div style="flex:1;min-width:0;"><div style="font-weight:700;font-size:13px;">'+p.name+'</div>'
+      +'<div style="font-size:11px;color:var(--mu);">'+Math.round(p.per100.kcal)+' kcal pro 100g</div></div>'
+      +'<div style="font-size:18px;color:var(--g2);font-weight:900;">＋</div>'
+      +'</div>';
+  }).join('');
+  window._pSearchResults=results;
+}
+function pAddSearchResult(i){
+  var p=window._pSearchResults[i];if(!p)return;
+  pIng.push({name:p.name,emoji:p.emoji,amount:100,per100:p.per100});
+  cacheFood(p);
+  pUpdateIngList();
+  document.getElementById('pSearchInp').value='';
+  document.getElementById('pSearchRes').innerHTML='';
+  showToast('✓ '+p.name+' hinzugefügt');
+}
+
 function renderPhotoIng(){
   document.getElementById('pIngList').innerHTML=renderIngHTML(pIng,'pi');
   updatePhotoTotal();
@@ -1123,17 +1466,15 @@ function updatePhotoTotal(){
   document.getElementById('pRecTotal').textContent='1 Portion: '+totalStr(t)+(p!==1?'  ·  '+p+'× = '+totalStr({kcal:t.kcal*p,protein:t.protein*p,carbs:t.carbs*p,fat:t.fat*p}):'');
 }
 function addPhotoRecipe(){
-  if(!pIng.length){showToast('Keine Zutaten erkannt');return;}
-  var name=document.getElementById('pRecName').value.trim()||'Erkanntes Gericht';
+  if(!pIng.length){showToast('Mindestens eine Zutat');return;}
+  var name=document.getElementById('pRecName').value.trim()||'Foto-Rezept';
   var portions=parseFloat(document.getElementById('pPortions').value)||1;
   var meal=document.getElementById('pMeal').value;
-  // Save as recipe
   var rec={id:Date.now().toString(),name:name,emoji:'📸',ingredients:JSON.parse(JSON.stringify(pIng))};
   recipes.unshift(rec);saveX();
-  // Add to diary
   var t=ingTotal(pIng);
   getDay().meals[meal].push({name:name,emoji:'📸',isRecipe:true,recipeId:rec.id,portions:portions,ingredients:JSON.parse(JSON.stringify(pIng)),kcal:t.kcal*portions,protein:t.protein*portions,carbs:t.carbs*portions,fat:t.fat*portions});
-  saveS();renderAll();closeOv('photoOv');showToast('📸 '+name+' gespeichert & eingetragen');
+  saveS();pStopBarcode();renderAll();closeOv('photoOv');showToast('📸 '+name+' gespeichert & eingetragen');
 }
 
 // ═══════════ CHAT ═══════════
@@ -1489,17 +1830,19 @@ function renderOwnFoodList(){
         +'<div style="font-size:18px;">'+f.emoji+'</div>'
         +'<div style="flex:1;min-width:0;"><div style="font-weight:700;font-size:13px;">'+f.name+'</div>'
         +'<div style="font-size:11px;color:var(--mu);">'+f.per100.kcal+' kcal pro 100g</div></div>'
-        +'<button type="button" onclick="deleteOwnFood('+i+')" style="background:none;border:none;font-size:16px;color:var(--re);opacity:.6;">🗑️</button></div>';
+        +'<button type="button" onclick="deleteOwnFood('+i+')" style="background:none;border:none;font-size:16px;color:var(--re);opacity:.6;">&#128465;</button></div>';
     });
   }
   if(recipes.length){
     html+='<div style="font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;margin:12px 0 6px;">Rezepte</div>';
-    recipes.forEach(function(r,i){
+    recipes.forEach(function(r){
+      var rid=r.id;
       html+='<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--br);">'
-        +'<div style="font-size:18px;">'+(r.emoji||'📋')+'</div>'
+        +'<div style="font-size:18px;">'+(r.emoji||'&#128203;')+'</div>'
         +'<div style="flex:1;min-width:0;"><div style="font-weight:700;font-size:13px;">'+r.name+'</div>'
         +'<div style="font-size:11px;color:var(--mu);">'+r.ingredients.length+' Zutaten</div></div>'
-        +'<button type="button" onclick="deleteRecipe(\''+r.id+'\')" style="background:none;border:none;font-size:16px;color:var(--re);opacity:.6;">🗑️</button></div>';
+        +'<button type="button" onclick="openEditRecipe(this.dataset.id)" data-id="'+rid+'" style="background:none;border:none;font-size:16px;color:var(--g2);margin-right:4px;">&#9998;</button>'
+        +'<button type="button" onclick="deleteRecipe(this.dataset.id)" data-id="'+rid+'" style="background:none;border:none;font-size:16px;color:var(--re);opacity:.6;">&#128465;</button></div>';
     });
   }
   if(!html)html='<div style="font-size:13px;color:var(--mu);font-style:italic;">Noch keine eigenen Lebensmittel oder Rezepte.</div>';
@@ -1566,8 +1909,190 @@ function openOv(id){document.getElementById(id).classList.add('open');}
 function closeOv(id){
   document.getElementById(id).classList.remove('open');
   if(id==='searchOv'){addIngToEntry=false;stopBarcode();}
+  if(id==='editRecOv'){erStopBarcode();}
+  if(id==='photoOv'){pStopBarcode();}
 }
 function bgClose(e,id){if(e.target.id===id)closeOv(id);}
+// ═══ RECIPE EDITOR ═══
+var _editRecId=null;
+var _erBarcodeReader=null,_erBarcodeActive=false;
+
+function openEditRecipe(id){
+  var rec=recipes.find(function(r){return r.id===id;});
+  if(!rec)return;
+  _editRecId=id;
+  document.getElementById('editRecTitle').textContent=(rec.emoji||'📋')+' '+rec.name;
+  document.getElementById('editRecName').value=rec.name;
+  renderEditRecIng(rec.ingredients);
+  // Hide all sub-panels
+  ['erSearchPanel','erChatPanel','erFotoPanel','erBarcodePanel'].forEach(function(i){document.getElementById(i).classList.add('hidden');});
+  erStopBarcode();
+  openOv('editRecOv');
+}
+
+function renderEditRecIng(ings){
+  document.getElementById('editRecIngList').innerHTML=renderIngHTML(ings,'er');
+  var t=ingTotal(ings);
+  document.getElementById('editRecTotal').textContent='Gesamt: '+totalStr(t);
+}
+
+function updateIngAmt_er(i,v){
+  var rec=recipes.find(function(r){return r.id===_editRecId;});
+  if(rec&&rec.ingredients[i])rec.ingredients[i].amount=parseFloat(v)||0;
+  var t=ingTotal(rec.ingredients);
+  document.getElementById('editRecTotal').textContent='Gesamt: '+totalStr(t);
+}
+
+function erShowMethod(method){
+  ['erSearchPanel','erChatPanel','erFotoPanel','erBarcodePanel'].forEach(function(i){document.getElementById(i).classList.add('hidden');});
+  erStopBarcode();
+  if(method==='search'){document.getElementById('erSearchPanel').classList.remove('hidden');erDoSearch();setTimeout(function(){document.getElementById('erSearchInp').focus();},100);}
+  else if(method==='chat'){document.getElementById('erChatPanel').classList.remove('hidden');setTimeout(function(){document.getElementById('erChatInp').focus();},100);}
+  else if(method==='foto'){document.getElementById('erFotoPanel').classList.remove('hidden');}
+  else if(method==='barcode'){document.getElementById('erBarcodePanel').classList.remove('hidden');erStartBarcode();}
+}
+
+function erDoSearch(){
+  var q=document.getElementById('erSearchInp').value.trim();
+  var results=[],seen={};
+  customFoods.forEach(function(f){if(!seen[f.name.toLowerCase()]){seen[f.name.toLowerCase()]=true;results.push({name:f.name,emoji:f.emoji,per100:f.per100});}});
+  DB.forEach(function(f){var s=fuzzy(f,q);if((s>0||!q)&&!seen[f.n.toLowerCase()]){seen[f.n.toLowerCase()]=true;results.push({name:f.n,emoji:f.e,per100:{kcal:f.k,protein:f.p,carbs:f.c,fat:f.f},score:s});}});
+  if(q)results.sort(function(a,b){return(b.score||0)-(a.score||0);});
+  results=results.slice(0,12);
+  window._erSearchRes=results;
+  var el=document.getElementById('erSearchRes');
+  if(!results.length){el.innerHTML='<div class="nr" style="padding:8px;">Kein Ergebnis</div>';return;}
+  el.innerHTML=results.map(function(p,i){
+    return'<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:1.5px solid var(--br);border-radius:10px;cursor:pointer;margin-bottom:5px;background:white;" onclick="erAddFood('+i+')">'
+      +'<div style="font-size:18px;">'+(p.emoji||'🍽')+'</div>'
+      +'<div style="flex:1;min-width:0;"><div style="font-weight:700;font-size:13px;">'+p.name+'</div>'
+      +'<div style="font-size:11px;color:var(--mu);">'+Math.round(p.per100.kcal)+' kcal pro 100g</div></div>'
+      +'<div style="font-size:18px;color:var(--g2);font-weight:900;">＋</div></div>';
+  }).join('');
+}
+
+function erAddFood(i){
+  var p=window._erSearchRes[i];if(!p)return;
+  erAddIngredient({name:p.name,emoji:p.emoji,amount:100,per100:p.per100});
+  document.getElementById('erSearchInp').value='';
+  document.getElementById('erSearchRes').innerHTML='';
+}
+
+function erSendChat(){
+  var msg=document.getElementById('erChatInp').value.trim();if(!msg)return;
+  if(!isOnline){showToast('Internet benötigt');return;}
+  var btn=document.getElementById('erChatBtn');
+  btn.innerHTML='<span class="spin"></span>';btn.disabled=true;
+  var prompt='Food item: '+msg+'\nReply ONLY JSON array:\n[{"name":"German name","emoji":"emoji","g":100}]\nOne item, only name and grams.';
+  callClaude('claude-haiku-4-5',[{type:'text',text:prompt}],100,
+    function(text){
+      try{
+        var match=text.match(/\[[\s\S]*\]/);if(!match)throw new Error();
+        var raw=JSON.parse(match[0]);
+        lookupNutrients(raw,function(resolved){
+          resolved.forEach(function(i){erAddIngredient({name:i.name,emoji:i.emoji,amount:i.amount,per100:i.per100});});
+          document.getElementById('erChatInp').value='';
+          btn.innerHTML='➤';btn.disabled=false;
+        });
+      }catch(e){showToast('Fehler');btn.innerHTML='➤';btn.disabled=false;}
+    },
+    function(err){showToast('Fehler: '+err);btn.innerHTML='➤';btn.disabled=false;}
+  );
+}
+
+function erHandlePhoto(e){
+  var file=e.target.files[0];if(!file)return;
+  var reader=new FileReader();
+  reader.onload=function(ev){
+    var img=new Image();
+    img.onload=function(){
+      var c=document.createElement('canvas'),MAX=800,w=img.width,h=img.height;
+      if(w>h){if(w>MAX){h=Math.round(h*MAX/w);w=MAX;}}else{if(h>MAX){w=Math.round(w*MAX/h);h=MAX;}}
+      c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);
+      var b64=c.toDataURL('image/jpeg',0.7).split(',')[1];
+      document.getElementById('erAnalyzing').classList.remove('hidden');
+      if(!isOnline){showToast('Internet benötigt');document.getElementById('erAnalyzing').classList.add('hidden');return;}
+      var prompt='Photo of food. List all visible ingredients. Reply ONLY JSON array:\n[{"name":"English food name","emoji":"emoji","g":150}]\nOnly name and grams. Max 6 items.';
+      callClaude('claude-sonnet-4-5',[{type:'image',source:{type:'base64',media_type:'image/jpeg',data:b64}},{type:'text',text:prompt}],200,
+        function(text){
+          try{
+            var match=text.match(/\[[\s\S]*\]/);if(!match)throw new Error();
+            var raw=JSON.parse(match[0]);
+            lookupNutrients(raw,function(resolved){
+              resolved.forEach(function(i){erAddIngredient({name:i.name,emoji:i.emoji,amount:i.amount,per100:i.per100});});
+              document.getElementById('erAnalyzing').classList.add('hidden');
+            });
+          }catch(ex){showToast('Fehler');document.getElementById('erAnalyzing').classList.add('hidden');}
+        },
+        function(err){showToast('Fehler: '+err);document.getElementById('erAnalyzing').classList.add('hidden');}
+      );
+    };
+    img.src=ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function erStartBarcode(){
+  if(typeof ZXing==='undefined'){showToast('Scanner lädt...');return;}
+  document.getElementById('erBarcodeWrap').classList.remove('hidden');
+  document.getElementById('erBarStartBtn').style.display='none';
+  document.getElementById('erBarStopBtn').style.display='block';
+  _erBarcodeActive=true;
+  var hints=new Map();
+  hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS,[ZXing.BarcodeFormat.EAN_13,ZXing.BarcodeFormat.EAN_8,ZXing.BarcodeFormat.UPC_A,ZXing.BarcodeFormat.UPC_E,ZXing.BarcodeFormat.CODE_128]);
+  _erBarcodeReader=new ZXing.BrowserMultiFormatReader(hints);
+  _erBarcodeReader.decodeFromVideoDevice(null,'erBarcodeVideo',function(result,err){
+    if(!_erBarcodeActive)return;
+    if(result){erStopBarcode();erLookupBarcode(result.getText());}
+  });
+}
+function erStopBarcode(){
+  _erBarcodeActive=false;
+  if(_erBarcodeReader){try{_erBarcodeReader.reset();}catch(e){}_erBarcodeReader=null;}
+  var w=document.getElementById('erBarcodeWrap');if(w)w.classList.add('hidden');
+  var s=document.getElementById('erBarStartBtn');if(s)s.style.display='block';
+  var t=document.getElementById('erBarStopBtn');if(t)t.style.display='none';
+}
+function erLookupBarcode(code){
+  showToast('🔍 Suche...');
+  var cached=barcodeCache[code];
+  if(cached){erAddIngredient({name:cached.name,emoji:cached.emoji,amount:100,per100:cached.per100});cacheFood(cached);return;}
+  if(!isOnline){showToast('Offline – Barcode nicht im Cache');return;}
+  fetch('https://world.openfoodfacts.org/api/v0/product/'+code+'.json')
+    .then(function(r){return r.json();})
+    .then(function(data){
+      if(data.status!==1||!data.product){showToast('Produkt nicht gefunden');return;}
+      var p=data.product,nm=p.nutriments||{};
+      var name=p.product_name_de||p.product_name||'Unbekannt';
+      var food={name:name,emoji:emo(name),barcode:code,per100:{kcal:nm['energy-kcal_100g']||0,protein:nm['proteins_100g']||0,carbs:nm['carbohydrates_100g']||0,fat:nm['fat_100g']||0}};
+      barcodeCache[code]=food;saveBarcodeCache();
+      erAddIngredient({name:food.name,emoji:food.emoji,amount:100,per100:food.per100});
+      cacheFood(food);
+    }).catch(function(){showToast('Fehler');});
+}
+
+function erAddIngredient(ing){
+  var rec=recipes.find(function(r){return r.id===_editRecId;});
+  if(!rec)return;
+  rec.ingredients.push(ing);
+  renderEditRecIng(rec.ingredients);
+  showToast((ing.emoji||'🍽')+' '+ing.name+' hinzugefügt');
+}
+
+function saveEditedRecipe(){
+  var rec=recipes.find(function(r){return r.id===_editRecId;});
+  if(!rec)return;
+  var newName=document.getElementById('editRecName').value.trim();
+  if(newName)rec.name=newName;
+  saveX();renderOwnFoodList();closeOv('editRecOv');
+  showToast('Rezept gespeichert ✓');
+}
+function deleteEditedRecipe(){
+  recipes=recipes.filter(function(r){return r.id!==_editRecId;});
+  saveX();renderOwnFoodList();closeOv('editRecOv');
+  showToast('Rezept gelöscht');
+}
+
 function showToast(msg){var t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},2500);}
 </script>
 </body>
