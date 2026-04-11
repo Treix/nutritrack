@@ -7,6 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="NutriTrack">
 <title>NutriTrack</title>
+<script src="https://unpkg.com/@zxing/library@0.19.1/umd/index.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=Nunito+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 <style>
@@ -225,6 +226,13 @@ button,input,select,textarea{font-family:'Nunito Sans',sans-serif;cursor:pointer
 .mdv{font-family:'Nunito',sans-serif;font-weight:800;font-size:13px;}
 .tst{position:fixed;bottom:96px;left:50%;transform:translateX(-50%) translateY(16px);background:var(--tx);color:white;border-radius:11px;padding:9px 16px;font-size:13px;font-weight:600;opacity:0;transition:all .25s;z-index:500;white-space:nowrap;pointer-events:none;}
 .tst.show{opacity:1;transform:translateX(-50%) translateY(0);}
+/* BARCODE */
+.barcode-wrap{position:relative;width:100%;border-radius:12px;overflow:hidden;background:#000;margin-bottom:12px;}
+.barcode-wrap video{width:100%;display:block;max-height:240px;object-fit:cover;}
+.barcode-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;}
+.barcode-line{width:70%;height:2px;background:var(--g2);box-shadow:0 0 8px var(--g2);animation:scan 2s linear infinite;}
+@keyframes scan{0%,100%{transform:translateY(-60px);}50%{transform:translateY(60px);}}
+.barcode-hint{position:absolute;bottom:10px;left:0;right:0;text-align:center;color:white;font-size:12px;font-weight:600;text-shadow:0 1px 3px rgba(0,0,0,.8);}
 </style>
 </head>
 <body>
@@ -324,6 +332,7 @@ button,input,select,textarea{font-family:'Nunito Sans',sans-serif;cursor:pointer
         <button type="button" class="qbtn" id="qbOwn" onclick="showPanel('own')"><span>✚</span>Eigenes</button>
         <button type="button" class="qbtn" id="qbRec" onclick="showPanel('rec')"><span>📋</span>Rezept</button>
         <button type="button" class="qbtn" id="qbQt" onclick="showPanel('qt')"><span>⚡</span>Quicktrack</button>
+        <button type="button" class="qbtn" id="qbBar" onclick="showPanel('bar')"><span>📷</span>Barcode</button>
       </div>
       <!-- Own food panel -->
       <div id="panelOwn" class="panel hidden">
@@ -356,6 +365,23 @@ button,input,select,textarea{font-family:'Nunito Sans',sans-serif;cursor:pointer
         <div class="frow"><input type="number" class="finp" id="qt_c" placeholder="Kohlenhydrate g"><input type="number" class="finp" id="qt_f" placeholder="Fett g"></div>
         <button type="button" class="fsave qt" onclick="addQuicktrack()">⚡ Direkt eintragen</button>
       </div>
+      <!-- Barcode panel -->
+      <div id="panelBar" class="panel hidden" style="background:#1a1a2e;border-color:#2d7d52;">
+        <div class="panel-title" style="color:#4caf7d;">📷 Barcode scannen</div>
+        <div id="barcodeWrap" class="barcode-wrap hidden">
+          <video id="barcodeVideo" playsinline></video>
+          <div class="barcode-overlay">
+            <div style="width:70%;height:50%;border:2px solid var(--g2);border-radius:8px;position:relative;">
+              <div class="barcode-line"></div>
+            </div>
+          </div>
+          <div class="barcode-hint">Barcode in den Rahmen halten</div>
+        </div>
+        <div id="barcodeResult" style="margin-top:8px;"></div>
+        <button type="button" id="barcodeStartBtn" class="fsave" style="background:var(--g2);" onclick="startBarcode()">▶ Scanner starten</button>
+        <button type="button" id="barcodeStopBtn" class="fsave" style="background:#555;display:none;" onclick="stopBarcode()">■ Scanner stoppen</button>
+      </div>
+
       <div id="searchRes" class="rl"></div>
       <div id="addSec" class="hidden">
         <div class="ar"><input type="number" class="ai2" id="amtInp" value="100" min="0.1" step="0.1"><div class="au" id="amtUnit">Gramm</div></div>
@@ -548,7 +574,7 @@ var DE_EN={apfel:'apple',birne:'pear',banane:'banana',orange:'orange',erdbeere:'
 
 // ═══════════ STATE ═══════════
 var S={apiKey:'',name:'Du',goal:2000,weight:0,height:0,currentDate:'',days:{}};
-var foodCache={}, customFoods=[], recipes=[];
+var foodCache={}, customFoods=[], recipes=[], barcodeCache={};
 var curMeal='breakfast', selFood=null, isOnline=navigator.onLine;
 var srchProducts=[], onlineLoaded=false;
 // recipe builder ingredients (in search panel)
@@ -570,12 +596,14 @@ function fmtDate(s){var t=today();if(s===t)return'Heute';if(s===addDays(t,-1))re
 function saveS(){try{localStorage.setItem('nt_v6',JSON.stringify(S));}catch(e){}}
 function loadS(){try{var d=localStorage.getItem('nt_v6');if(d){Object.assign(S,JSON.parse(d));return true;}}catch(e){}return false;}
 function saveX(){try{localStorage.setItem('nt_x',JSON.stringify({fc:foodCache,cf:customFoods,rc:recipes}));}catch(e){}}
+function saveBarcodeCache(){try{localStorage.setItem('nt_bc',JSON.stringify(barcodeCache));}catch(e){}}
+function loadBarcodeCache(){try{var d=localStorage.getItem('nt_bc');if(d)barcodeCache=JSON.parse(d);}catch(e){}}
 function loadX(){try{var d=localStorage.getItem('nt_x');if(d){var x=JSON.parse(d);foodCache=x.fc||{};customFoods=x.cf||[];recipes=x.rc||[];}}catch(e){}}
 function cacheFood(f){var k=f.name.toLowerCase().trim();foodCache[k]={name:f.name,emoji:f.emoji,per100:f.per100,addedAt:Date.now()};saveX();}
 
 // ═══════════ INIT ═══════════
 window.addEventListener('DOMContentLoaded',function(){
-  loadS();loadX();
+  loadS();loadX();loadBarcodeCache();
   S.currentDate=today();
   window.addEventListener('online',function(){isOnline=true;updBadge();showToast('Online 🌐');});
   window.addEventListener('offline',function(){isOnline=false;updBadge();showToast('Offline 📴');});
@@ -802,8 +830,8 @@ function openSearch(meal){
 }
 
 function showPanel(name){
-  var ids={own:'panelOwn',rec:'panelRec',qt:'panelQt'};
-  var qids={own:'qbOwn',rec:'qbRec',qt:'qbQt'};
+  var ids={own:'panelOwn',rec:'panelRec',qt:'panelQt',bar:'panelBar'};
+  var qids={own:'qbOwn',rec:'qbRec',qt:'qbQt',bar:'qbBar'};
   Object.keys(ids).forEach(function(k){
     var isThis=k===name;
     var p=document.getElementById(ids[k]);
@@ -1308,6 +1336,123 @@ function kiEstimate(name,emoji,grams){
   return{name:name,emoji:emoji,amount:grams,per100:per100,source:'estimate'};
 }
 
+// ═══ BARCODE SCANNER ═══
+var _barcodeReader=null;
+var _barcodeActive=false;
+
+function startBarcode(){
+  if(typeof ZXing==='undefined'){showToast('Scanner lädt...');return;}
+  document.getElementById('barcodeWrap').classList.remove('hidden');
+  document.getElementById('barcodeStartBtn').style.display='none';
+  document.getElementById('barcodeStopBtn').style.display='block';
+  document.getElementById('barcodeResult').innerHTML='<div style="color:#aaa;font-size:13px;text-align:center;">Scanne einen EAN/QR Barcode...</div>';
+  _barcodeActive=true;
+  var hints=new Map();
+  hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS,[
+    ZXing.BarcodeFormat.EAN_13,ZXing.BarcodeFormat.EAN_8,
+    ZXing.BarcodeFormat.UPC_A,ZXing.BarcodeFormat.UPC_E,
+    ZXing.BarcodeFormat.CODE_128,ZXing.BarcodeFormat.QR_CODE
+  ]);
+  _barcodeReader=new ZXing.BrowserMultiFormatReader(hints);
+  _barcodeReader.decodeFromVideoDevice(null,'barcodeVideo',function(result,err){
+    if(!_barcodeActive)return;
+    if(result){
+      var code=result.getText();
+      stopBarcode();
+      lookupBarcode(code);
+    }
+  });
+}
+
+function stopBarcode(){
+  _barcodeActive=false;
+  if(_barcodeReader){try{_barcodeReader.reset();}catch(e){}_barcodeReader=null;}
+  document.getElementById('barcodeWrap').classList.add('hidden');
+  document.getElementById('barcodeStartBtn').style.display='block';
+  document.getElementById('barcodeStopBtn').style.display='none';
+}
+
+function lookupBarcode(code){
+  var el=document.getElementById('barcodeResult');
+  el.innerHTML='<div style="color:#4caf7d;font-size:13px;text-align:center;">🔍 Suche Barcode '+code+'...</div>';
+
+  // 1. Check local cache first
+  var cached=barcodeCache[code];
+  if(cached){
+    el.innerHTML='';
+    showBarcodeResult(cached,true);
+    return;
+  }
+
+  // 2. Need internet for new barcodes
+  if(!isOnline){
+    el.innerHTML='<div style="color:#f4845f;font-size:13px;text-align:center;">📴 Offline – Barcode nicht im Cache</div>';
+    return;
+  }
+
+  // 3. Fetch from Open Food Facts
+  fetch('https://world.openfoodfacts.org/api/v0/product/'+code+'.json')
+    .then(function(r){return r.json();})
+    .then(function(data){
+      if(data.status!==1||!data.product){
+        el.innerHTML='<div style="color:#f4845f;font-size:13px;text-align:center;">❌ Produkt nicht gefunden ('+code+')</div>';
+        return;
+      }
+      var p=data.product;
+      var nm=p.nutriments||{};
+      var name=p.product_name_de||p.product_name||p.abbreviated_product_name||'Unbekannt';
+      var food={
+        name:name,
+        emoji:emo(name),
+        barcode:code,
+        per100:{
+          kcal:nm['energy-kcal_100g']||nm['energy_100g']||0,
+          protein:nm['proteins_100g']||0,
+          carbs:nm['carbohydrates_100g']||0,
+          fat:nm['fat_100g']||0
+        }
+      };
+      // Save to barcode cache for offline use
+      barcodeCache[code]=food;
+      saveBarcodeCache();
+      el.innerHTML='';
+      showBarcodeResult(food,false);
+    })
+    .catch(function(){
+      el.innerHTML='<div style="color:#f4845f;font-size:13px;text-align:center;">❌ Fehler beim Laden</div>';
+    });
+}
+
+function showBarcodeResult(food,fromCache){
+  var el=document.getElementById('barcodeResult');
+  var cacheLabel=fromCache?'<div style="font-size:10px;color:var(--g2);margin-top:2px;">📴 Aus lokalem Cache</div>':'';
+  el.innerHTML='<div style="background:var(--gl);border:1.5px solid var(--g3);border-radius:12px;padding:12px;">'
+    +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">'
+    +'<div style="font-size:28px;">'+(food.emoji||'🍽')+'</div>'
+    +'<div style="flex:1;"><div style="font-weight:700;font-size:14px;">'+food.name+'</div>'
+    +'<div style="font-size:11px;color:var(--mu);margin-top:2px;">P '+food.per100.protein+'g · K '+food.per100.carbs+'g · F '+food.per100.fat+'g pro 100g</div>'
+    +cacheLabel
+    +'</div>'
+    +'<div style="font-weight:800;font-size:15px;color:var(--g1);">'+Math.round(food.per100.kcal)+' kcal</div>'
+    +'</div>'
+    +'<div style="display:flex;gap:8px;align-items:center;">'
+    +'<input type="number" id="barcodeAmt" value="100" min="1" style="flex:1;border:2px solid var(--br);border-radius:9px;padding:8px;font-size:14px;font-weight:700;text-align:center;outline:none;">'
+    +'<div style="font-size:13px;color:var(--mu);">Gramm</div>'
+    +'</div>'
+    +'<button type="button" onclick="addBarcodeFood()" style="width:100%;background:linear-gradient(135deg,var(--g1),var(--g2));color:white;border:none;border-radius:10px;padding:11px;font-weight:800;font-size:14px;margin-top:8px;">Hinzufügen ✓</button>'
+    +'</div>';
+  window._barcodeFood=food;
+  cacheFood(food);
+}
+function addBarcodeFood(){
+  var food=window._barcodeFood;if(!food)return;
+  var amt=parseFloat(document.getElementById('barcodeAmt').value)||100;
+  var r=amt/100;
+  getDay().meals[curMeal].push({name:food.name,emoji:food.emoji,amount:amt,per100:food.per100,kcal:food.per100.kcal*r,protein:food.per100.protein*r,carbs:food.per100.carbs*r,fat:food.per100.fat*r});
+  saveS();renderAll();closeOv('searchOv');
+  showToast((food.emoji||'🍽')+' '+food.name+' hinzugefügt');
+}
+
 function callClaude(model,content,maxTok,onOk,onErr){
   fetch('https://api.anthropic.com/v1/messages',{
     method:'POST',
@@ -1363,7 +1508,7 @@ function renderOwnFoodList(){
 function deleteOwnFood(i){customFoods.splice(i,1);saveX();renderOwnFoodList();document.getElementById('cacheInfo').textContent=customFoods.length+' eigene · '+recipes.length+' Rezepte';}
 function deleteRecipe(id){recipes=recipes.filter(function(r){return r.id!==id;});saveX();renderOwnFoodList();document.getElementById('cacheInfo').textContent=customFoods.length+' eigene · '+recipes.length+' Rezepte';}
 function exportData(){
-  var blob=new Blob([JSON.stringify({state:S,foodCache:foodCache,customFoods:customFoods,recipes:recipes},null,2)],{type:'application/json'});
+  var blob=new Blob([JSON.stringify({state:S,foodCache:foodCache,customFoods:customFoods,recipes:recipes,barcodeCache:barcodeCache},null,2)],{type:'application/json'});
   var url=URL.createObjectURL(blob),a=document.createElement('a');
   a.href=url;a.download='nutritrack-backup.json';a.click();URL.revokeObjectURL(url);showToast('Backup gespeichert 📤');
 }
@@ -1377,7 +1522,8 @@ function importData(e){
       if(d.foodCache)Object.assign(foodCache,d.foodCache);
       if(d.customFoods)customFoods=d.customFoods;
       if(d.recipes)recipes=d.recipes;
-      saveS();saveX();renderAll();closeOv('settOv');showToast('Importiert ✓');
+      if(d.barcodeCache)Object.assign(barcodeCache,d.barcodeCache);
+      saveS();saveX();saveBarcodeCache();renderAll();closeOv('settOv');showToast('Importiert ✓');
     }catch(e){showToast('Fehler beim Import');}
   };
   reader.readAsText(file);
@@ -1419,7 +1565,7 @@ function switchTab(tab){
 function openOv(id){document.getElementById(id).classList.add('open');}
 function closeOv(id){
   document.getElementById(id).classList.remove('open');
-  if(id==='searchOv')addIngToEntry=false;
+  if(id==='searchOv'){addIngToEntry=false;stopBarcode();}
 }
 function bgClose(e,id){if(e.target.id===id)closeOv(id);}
 function showToast(msg){var t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},2500);}
