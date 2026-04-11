@@ -471,6 +471,56 @@ button,input,select,textarea{font-family:'Nunito Sans',sans-serif;cursor:pointer
         <input type="file" id="impInp" accept=".json" style="display:none" onchange="importData(event)">
         <div class="cache-info" id="cacheInfo"></div>
       </div>
+      <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--br);">
+        <label class="lbl" style="margin-bottom:8px;">Eigene Lebensmittel</label>
+        <div id="customFoodList"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT ENTRY MODAL -->
+<div class="ov" id="editEntryOv" onclick="bgClose(event,'editEntryOv')">
+  <div class="mod">
+    <div class="mhan"></div>
+    <div class="mhd">
+      <button type="button" class="mcl" onclick="closeOv('editEntryOv')">✕</button>
+      <div class="mti" id="editEntryTitle">Eintrag bearbeiten</div>
+      <div class="msu">Menge anpassen</div>
+    </div>
+    <div class="mbd">
+      <div class="ar" style="margin-top:0;">
+        <input type="number" class="ai2" id="editEntryAmt" min="1">
+        <div class="au">Gramm</div>
+      </div>
+      <button type="button" class="cb2" style="margin-top:12px;" onclick="confirmEditEntry()">Speichern ✓</button>
+      <button type="button" class="seb" style="margin-top:8px;color:var(--re);border-color:var(--re);" onclick="confirmDeleteEntry()">🗑️ Eintrag löschen</button>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT CUSTOM FOOD MODAL -->
+<div class="ov" id="editCustomOv" onclick="bgClose(event,'editCustomOv')">
+  <div class="mod">
+    <div class="mhan"></div>
+    <div class="mhd">
+      <button type="button" class="mcl" onclick="closeOv('editCustomOv')">✕</button>
+      <div class="mti">Eigenes Lebensmittel bearbeiten</div>
+    </div>
+    <div class="mbd">
+      <input type="text" class="cf-inp" id="ecf_name" placeholder="Name">
+      <input type="text" class="cf-inp" id="ecf_emoji" placeholder="Emoji">
+      <div class="cf-row2">
+        <input type="number" class="cf-inp" id="ecf_kcal" placeholder="kcal">
+        <input type="number" class="cf-inp" id="ecf_protein" placeholder="Protein g">
+      </div>
+      <div class="cf-row2">
+        <input type="number" class="cf-inp" id="ecf_carbs" placeholder="Kohlenhydrate g">
+        <input type="number" class="cf-inp" id="ecf_fat" placeholder="Fett g">
+      </div>
+      <div style="font-size:11px;color:var(--mu);margin-bottom:8px;">Alle Werte pro 100g</div>
+      <button type="button" class="cf-save" onclick="confirmEditCustom()">💾 Speichern</button>
+      <button type="button" class="seb" style="margin-top:8px;color:var(--re);border-color:var(--re);" onclick="confirmDeleteCustom()">🗑️ Lebensmittel löschen</button>
     </div>
   </div>
 </div>
@@ -816,10 +866,31 @@ function renderAll(){
     var c=document.getElementById('entries-'+m);
     if(!en.length){c.innerHTML='<div class="me">Noch nichts eingetragen</div>';return;}
     c.innerHTML=en.map(function(e,i){
-      return '<div class="fe"><div class="fee">'+e.emoji+'</div><div class="fei"><div class="fen">'+e.name+'</div><div class="fem">'+e.amount+'g · P'+Math.round(e.protein)+'g K'+Math.round(e.carbs)+'g F'+Math.round(e.fat)+'g</div></div><div class="fek">'+Math.round(e.kcal)+' kcal</div><button type="button" class="fd" onclick="delE(\''+m+'\','+i+')">✕</button></div>';
+      return '<div class="fe" onclick="openEditEntry(\''+m+'\','+i+')" style="cursor:pointer;"><div class="fee">'+e.emoji+'</div><div class="fei"><div class="fen">'+e.name+'</div><div class="fem">'+e.amount+'g · P'+Math.round(e.protein)+'g K'+Math.round(e.carbs)+'g F'+Math.round(e.fat)+'g</div></div><div class="fek">'+Math.round(e.kcal)+' kcal</div><div style="font-size:16px;color:var(--mu);padding:4px;opacity:.5;flex-shrink:0;">✏️</div></div>';
     }).join('');
   });
   renderWater();
+}
+var editEntryMeal=null,editEntryIdx=null;
+function openEditEntry(m,i){
+  var entry=getDay().meals[m][i];
+  editEntryMeal=m;editEntryIdx=i;
+  document.getElementById('editEntryTitle').textContent=entry.emoji+' '+entry.name;
+  document.getElementById('editEntryAmt').value=entry.amount;
+  openOv('editEntryOv');
+}
+function confirmEditEntry(){
+  var amt=parseFloat(document.getElementById('editEntryAmt').value)||0;
+  if(!amt){showToast('Bitte Menge eingeben');return;}
+  var day=getDay(),e=day.meals[editEntryMeal][editEntryIdx];
+  var p=e.per100||{kcal:e.kcal/(e.amount/100),protein:e.protein/(e.amount/100),carbs:e.carbs/(e.amount/100),fat:e.fat/(e.amount/100)};
+  var r=amt/100;
+  e.amount=amt;e.kcal=p.kcal*r;e.protein=p.protein*r;e.carbs=p.carbs*r;e.fat=p.fat*r;
+  saveS();renderAll();closeOv('editEntryOv');showToast('Aktualisiert ✓');
+}
+function confirmDeleteEntry(){
+  getDay().meals[editEntryMeal].splice(editEntryIdx,1);
+  saveS();renderAll();closeOv('editEntryOv');
 }
 function delE(m,i){getDay().meals[m].splice(i,1);saveS();renderAll();}
 function renderWater(){
@@ -913,7 +984,9 @@ function openSearch(meal){
   var t={breakfast:'Frühstück',lunch:'Mittagessen',dinner:'Abendessen',snack:'Snack'};
   document.getElementById('searchTitle').textContent=t[meal]+' – Lebensmittel';
   // Show default local results
-  renderSearchResults(searchLocal(''),false);
+  var initLocal = searchLocal('');
+  srchProducts = initLocal.slice();
+  renderSearchResults(srchProducts,false);
   openOv('searchOv');
   setTimeout(function(){document.getElementById('searchQ').focus();},350);
 }
@@ -1014,7 +1087,7 @@ function selR(i,el){
 function confirmAdd(){
   if(!selFood)return;
   var amt=parseFloat(document.getElementById('amtInp').value)||100,r=amt/100,f=selFood;
-  getDay().meals[curMeal].push({name:f.name,emoji:f.emoji,amount:amt,kcal:f.per100.kcal*r,protein:f.per100.protein*r,carbs:f.per100.carbs*r,fat:f.per100.fat*r});
+  getDay().meals[curMeal].push({name:f.name,emoji:f.emoji,amount:amt,per100:f.per100,kcal:f.per100.kcal*r,protein:f.per100.protein*r,carbs:f.per100.carbs*r,fat:f.per100.fat*r});
   cacheFood(f);
   saveS();renderAll();closeOv('searchOv');
   showToast(f.emoji+' '+f.name+' hinzugefügt');
@@ -1141,7 +1214,7 @@ function addAiFoods(){
   var meal=document.getElementById('pMeal').value,day=getDay(),n=0;
   aiDetected.filter(function(f){return f.selected;}).forEach(function(f){
     var r=f.estimatedGrams/100;
-    day.meals[meal].push({name:f.name,emoji:f.emoji,amount:f.estimatedGrams,kcal:f.per100.kcal*r,protein:f.per100.protein*r,carbs:f.per100.carbs*r,fat:f.per100.fat*r});
+    day.meals[meal].push({name:f.name,emoji:f.emoji,amount:f.estimatedGrams,per100:f.per100,kcal:f.per100.kcal*r,protein:f.per100.protein*r,carbs:f.per100.carbs*r,fat:f.per100.fat*r});
     cacheFood({name:f.name,emoji:f.emoji,per100:f.per100});n++;
   });
   saveS();renderAll();closeOv('photoOv');showToast(n+' Lebensmittel hinzugefügt 🎉');
@@ -1206,7 +1279,7 @@ function addChatFoods(){
   var meal=document.getElementById('chatMeal').value,day=getDay(),n=0;
   chatDetected.filter(function(f){return f.selected;}).forEach(function(f){
     var r=f.estimatedGrams/100;
-    day.meals[meal].push({name:f.name,emoji:f.emoji,amount:f.estimatedGrams,kcal:f.per100.kcal*r,protein:f.per100.protein*r,carbs:f.per100.carbs*r,fat:f.per100.fat*r});
+    day.meals[meal].push({name:f.name,emoji:f.emoji,amount:f.estimatedGrams,per100:f.per100,kcal:f.per100.kcal*r,protein:f.per100.protein*r,carbs:f.per100.carbs*r,fat:f.per100.fat*r});
     cacheFood({name:f.name,emoji:f.emoji,per100:f.per100});n++;
   });
   saveS();renderAll();closeOv('chatOv');showToast(n+' Lebensmittel hinzugefügt 🎉');
@@ -1233,6 +1306,39 @@ function callClaude(content,maxTokens,onSuccess,onError){
 // ══════════════════════════════════════
 // SETTINGS
 // ══════════════════════════════════════
+var editCustomIdx=null;
+function renderCustomFoodList(){
+  var el=document.getElementById('customFoodList');if(!el)return;
+  if(!customFoods.length){el.innerHTML='<div style="font-size:13px;color:var(--mu);font-style:italic;">Noch keine eigenen Lebensmittel.</div>';return;}
+  el.innerHTML=customFoods.map(function(f,i){
+    return '<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--br);">'
+      +'<div style="font-size:20px;">'+f.emoji+'</div>'
+      +'<div style="flex:1;min-width:0;"><div style="font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+f.name+'</div>'
+      +'<div style="font-size:11px;color:var(--mu);">'+f.per100.kcal+' kcal · P'+f.per100.protein+'g K'+f.per100.carbs+'g F'+f.per100.fat+'g</div></div>'
+      +'<button type="button" onclick="openEditCustom('+i+')" style="background:none;border:none;font-size:18px;padding:4px;">✏️</button>'
+      +'</div>';
+  }).join('');
+}
+function openEditCustom(i){
+  editCustomIdx=i;var f=customFoods[i];
+  document.getElementById('ecf_name').value=f.name;
+  document.getElementById('ecf_emoji').value=f.emoji;
+  document.getElementById('ecf_kcal').value=f.per100.kcal;
+  document.getElementById('ecf_protein').value=f.per100.protein;
+  document.getElementById('ecf_carbs').value=f.per100.carbs;
+  document.getElementById('ecf_fat').value=f.per100.fat;
+  openOv('editCustomOv');
+}
+function confirmEditCustom(){
+  var name=document.getElementById('ecf_name').value.trim();
+  if(!name){showToast('Name eingeben');return;}
+  customFoods[editCustomIdx]={name:name,emoji:document.getElementById('ecf_emoji').value.trim()||emo(name),per100:{kcal:parseFloat(document.getElementById('ecf_kcal').value)||0,protein:parseFloat(document.getElementById('ecf_protein').value)||0,carbs:parseFloat(document.getElementById('ecf_carbs').value)||0,fat:parseFloat(document.getElementById('ecf_fat').value)||0}};
+  saveCustom();renderCustomFoodList();closeOv('editCustomOv');showToast('Gespeichert ✓');
+}
+function confirmDeleteCustom(){
+  customFoods.splice(editCustomIdx,1);
+  saveCustom();renderCustomFoodList();closeOv('editCustomOv');showToast('Gelöscht');
+}
 function openSettings(){
   document.getElementById('sk').value=S.apiKey;
   document.getElementById('sn').value=S.name;
@@ -1241,6 +1347,7 @@ function openSettings(){
   document.getElementById('sh').value=S.height||'';
   var n1=Object.keys(foodCache).length,n2=customFoods.length;
   document.getElementById('cacheInfo').textContent=n2+' eigene · '+n1+' gespeicherte Lebensmittel';
+  renderCustomFoodList();
   openOv('settOv');
 }
 function saveSettings(){
