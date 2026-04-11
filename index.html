@@ -1138,9 +1138,7 @@ function addMoreToPhoto(){
   if(!isOnline){showToast('Internet benötigt');return;}
   var btn=document.getElementById('pAddMoreBtn');
   btn.innerHTML='<span class="spin"></span>';btn.disabled=true;
-  var prompt='Add this food to a meal: "'+msg+'"
-Reply ONLY JSON array with ONE or more items:
-[{"name":"German name","emoji":"emoji","g":100,"p100":{"k":89,"p":1.1,"c":23,"f":0.3}}]';
+  var prompt='Add this food: '+msg+'. Reply ONLY JSON array:\n[{"name":"German name","emoji":"emoji","g":100,"p100":{"k":89,"p":1.1,"c":23,"f":0.3}}]';
   callClaude('claude-haiku-4-5',[{type:'text',text:prompt}],150,
     function(text){
       var items=parseIngJSON(text);
@@ -1160,9 +1158,7 @@ function addMoreToChat(){
   if(!isOnline){showToast('Internet benötigt');return;}
   var btn=document.getElementById('cAddMoreBtn');
   btn.innerHTML='<span class="spin"></span>';btn.disabled=true;
-  var prompt='Add this food to a meal: "'+msg+'"
-Reply ONLY JSON array with ONE or more items:
-[{"name":"German name","emoji":"emoji","g":100,"p100":{"k":89,"p":1.1,"c":23,"f":0.3}}]';
+  var prompt='Add this food: '+msg+'. Reply ONLY JSON array:\n[{"name":"German name","emoji":"emoji","g":100,"p100":{"k":89,"p":1.1,"c":23,"f":0.3}}]';
   callClaude('claude-haiku-4-5',[{type:'text',text:prompt}],150,
     function(text){
       var items=parseIngJSON(text);
