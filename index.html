@@ -7,8 +7,14 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="NutriTrack">
 <title>NutriTrack</title>
+<!-- Fonts: load from Google if online, fallback to system fonts offline -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=Nunito+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=Nunito+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<style>
+/* Offline fallback: use system fonts if Google Fonts unavailable */
+@font-face{font-family:'Nunito';font-weight:700 900;font-style:normal;src:local('Arial Rounded MT Bold'),local('Helvetica Neue'),local('system-ui');font-display:swap;}
+@font-face{font-family:'Nunito Sans';font-weight:400 700;font-style:normal;src:local('Helvetica Neue'),local('Arial'),local('system-ui');font-display:swap;}
+</style>
 <style>
 :root{
   --g1:#2d7d52;--g2:#4caf7d;--g3:#7dcda4;--gl:#eaf5ef;
@@ -1309,6 +1315,86 @@ function bgClose(e,id){if(e.target.id===id)closeOv(id);}
 // TOAST
 // ══════════════════════════════════════
 function showToast(msg){var t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},2500);}
+</script>
+
+<script>
+// ══════════════════════════════════════
+// SERVICE WORKER (inline blob) - enables offline use
+// ══════════════════════════════════════
+(function(){
+  if(!('serviceWorker' in navigator)) return;
+
+  // Inline SW code as blob URL
+  var swCode = [
+    'var CACHE="nt-v5";',
+    'var OFFLINE_URLS=["/nutritrack/","/nutritrack/index.html"];',
+    'self.addEventListener("install",function(e){',
+    '  e.waitUntil(',
+    '    caches.open(CACHE).then(function(c){',
+    '      return c.addAll(OFFLINE_URLS).catch(function(){});',
+    '    })',
+    '  );',
+    '  self.skipWaiting();',
+    '});',
+    'self.addEventListener("activate",function(e){',
+    '  e.waitUntil(',
+    '    caches.keys().then(function(keys){',
+    '      return Promise.all(keys.filter(function(k){return k!==CACHE;}).map(function(k){return caches.delete(k);}));',
+    '    })',
+    '  );',
+    '  self.clients.claim();',
+    '});',
+    'self.addEventListener("fetch",function(e){',
+    '  var url=e.request.url;',
+    '  // Never cache API calls',
+    '  if(url.includes("anthropic.com")||url.includes("corsproxy")||url.includes("openfoodfacts")){',
+    '    e.respondWith(fetch(e.request).catch(function(){return new Response("",{status:503});}));',
+    '    return;',
+    '  }',
+    '  // Cache-first for app shell',
+    '  e.respondWith(',
+    '    caches.match(e.request).then(function(cached){',
+    '      if(cached) return cached;',
+    '      return fetch(e.request).then(function(resp){',
+    '        if(resp.ok){',
+    '          var clone=resp.clone();',
+    '          caches.open(CACHE).then(function(c){c.put(e.request,clone);});',
+    '        }',
+    '        return resp;',
+    '      }).catch(function(){',
+    '        // Offline fallback: return cached index.html for navigation',
+    '        return caches.match("/nutritrack/index.html")||caches.match("/nutritrack/");',
+    '      });',
+    '    })',
+    '  );',
+    '});'
+  ].join("\n");
+
+  var blob = new Blob([swCode], {type:'application/javascript'});
+  var swUrl = URL.createObjectURL(blob);
+
+  navigator.serviceWorker.register(swUrl, {scope: '/'}).then(function(reg){
+    // SW registered - app can now work offline after first load
+    // Also cache current page manually
+    if(caches && reg.active){
+      caches.open('nt-v5').then(function(c){
+        c.add(window.location.href).catch(function(){});
+        // Cache fonts if online
+        if(navigator.onLine){
+          c.add('https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=Nunito+Sans:wght@400;500;600;700&display=swap').catch(function(){});
+        }
+      });
+    }
+  }).catch(function(){
+    // Blob URL SW may be blocked in some browsers
+    // Fallback: manual page cache
+    if(caches){
+      caches.open('nt-v5').then(function(c){
+        c.add(window.location.href).catch(function(){});
+      });
+    }
+  });
+})();
 </script>
 </body>
 </html>
