@@ -424,42 +424,29 @@ button,input,select,textarea{font-family:'Nunito Sans',sans-serif;cursor:pointer
           <button type="button" class="qbtn" onclick="pShowMethod('foto')"><span>📷</span>Foto</button>
           <button type="button" class="qbtn" onclick="pShowMethod('chat')"><span>💬</span>KI-Chat</button>
           <button type="button" class="qbtn" onclick="pShowMethod('search')"><span>🔍</span>Suche</button>
+          <button type="button" class="qbtn" onclick="pShowMethod('barcode')"><span>📊</span>Barcode</button>
         </div>
       </div>
 
       <!-- Foto sub-panel -->
       <div id="pFotoPanel">
-        <div id="pPickArea"><div class="pbtns"><button type="button" class="pbtn" onclick="document.getElementById('pCam').click()"><span>📷</span>Kamera + Scan</button><button type="button" class="pbtn" onclick="document.getElementById('pGal').click()"><span>🖼️</span>Galerie + Scan</button></div></div>
+        <div id="pPickArea"><div class="pbtns"><button type="button" class="pbtn" onclick="document.getElementById('pCam').click()"><span>📷</span>Kamera</button><button type="button" class="pbtn" onclick="document.getElementById('pGal').click()"><span>🖼️</span>Galerie</button></div></div>
         <input type="file" id="pCam" accept="image/*" capture="environment" style="display:none" onchange="handlePhoto(event)">
         <input type="file" id="pGal" accept="image/*" style="display:none" onchange="handlePhoto(event)">
         <div id="pPrevWrap" class="pprev-wrap hidden">
           <img id="pPrev">
           <button type="button" class="pchange" onclick="resetPhotoPanel()">Ändern</button>
         </div>
-        <div id="pPhotoStatus" class="panel hidden" style="margin-bottom:10px;padding:10px 12px;font-size:12px;color:var(--mu);"></div>
-        <button type="button" class="abt hidden" id="aBtn" disabled style="margin-bottom:10px;">📷 Analysieren</button>
+        <button type="button" class="abt" id="aBtn" disabled style="margin-bottom:10px;">📷 Analysieren</button>
       </div>
 
       <!-- Barcode confirm dialog -->
       <div id="pBarcodeConfirm" class="hidden" style="background:var(--gl);border:1.5px solid var(--g3);border-radius:12px;padding:13px;margin-bottom:10px;">
         <div style="font-weight:700;font-size:14px;margin-bottom:4px;" id="pBarcodeFoundName"></div>
         <div style="font-size:12px;color:var(--mu);margin-bottom:10px;" id="pBarcodeFoundNutrients"></div>
-        <div class="panel" style="background:white;margin-bottom:10px;">
-          <div class="panel-title" style="margin-bottom:8px;">Daten prüfen oder direkt korrigieren</div>
-          <input type="text" class="finp" id="pBcName" placeholder="Name des Lebensmittels">
-          <div class="frow">
-            <input type="number" class="finp" id="pBcKcal" placeholder="kcal / 100 g" step="0.1">
-            <input type="number" class="finp" id="pBcProtein" placeholder="Protein" step="0.1">
-          </div>
-          <div class="frow">
-            <input type="number" class="finp" id="pBcCarbs" placeholder="Kohlenhydrate" step="0.1">
-            <input type="number" class="finp" id="pBcFat" placeholder="Fett" step="0.1">
-          </div>
-        </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <button type="button" class="fsave" style="flex:1;min-width:150px;" onclick="pConfirmBarcode(true,false)">✓ Ja, korrekt</button>
-          <button type="button" class="fsave" style="flex:1;min-width:150px;background:var(--or);" onclick="pConfirmBarcode(true,true)">💾 Korrigiert speichern</button>
-          <button type="button" class="fsave" style="flex:1;min-width:150px;background:var(--mu);" onclick="pConfirmBarcode(false,false)">✕ Nein, KI nutzen</button>
+        <div style="display:flex;gap:8px;">
+          <button type="button" class="fsave" style="flex:1;" onclick="pConfirmBarcode(true)">✓ Ja, korrekt</button>
+          <button type="button" class="fsave" style="flex:1;background:var(--mu);" onclick="pConfirmBarcode(false)">✕ Nein, KI nutzen</button>
         </div>
       </div>
 
@@ -480,7 +467,20 @@ button,input,select,textarea{font-family:'Nunito Sans',sans-serif;cursor:pointer
         <div id="pSearchRes" class="rl" style="max-height:200px;overflow-y:auto;"></div>
       </div>
 
-      <div id="pBarcodePanel" class="hidden"></div>
+      <!-- Barcode sub-panel -->
+      <div id="pBarcodePanel" class="hidden">
+        <div id="pBarcodeWrap" class="barcode-wrap hidden">
+          <video id="pBarcodeVideo" playsinline></video>
+          <div class="barcode-overlay">
+            <div style="width:70%;height:50%;border:2px solid var(--g2);border-radius:8px;position:relative;">
+              <div class="barcode-line"></div>
+            </div>
+          </div>
+          <div class="barcode-hint">Barcode in den Rahmen halten</div>
+        </div>
+        <button type="button" id="pBarStartBtn" class="fsave" onclick="pStartBarcode()">▶ Barcode scannen</button>
+        <button type="button" id="pBarStopBtn" class="fsave" style="background:#555;display:none;" onclick="pStopBarcode()">■ Stoppen</button>
+      </div>
 
     </div>
   </div>
@@ -886,15 +886,6 @@ function saveEditEntry(){
 function deleteEntry(){getDay().meals[editM].splice(editI,1);saveS();renderAll();closeOv('editOv');}
 
 // ═══════════ EMOJI ═══════════
-
-function mealByTime(){
-  var h=new Date().getHours();
-  if(h<11)return 'breakfast';
-  if(h<15)return 'lunch';
-  if(h<22)return 'dinner';
-  return 'snack';
-}
-
 function emo(n){
   var nl=(n||'').toLowerCase();
   var m=[[/banane/,'🍌'],[/apfel|äpfel/,'🍎'],[/birne/,'🍐'],[/orange|mandarine/,'🍊'],[/erdbeere/,'🍓'],[/blaubeer|heidelbeer/,'🫐'],[/himbeere/,'🫐'],[/kirsch/,'🍒'],[/trauben/,'🍇'],[/kiwi/,'🥝'],[/mango/,'🥭'],[/avocado/,'🥑'],[/melone/,'🍉'],[/pfirsich|nektarine/,'🍑'],[/tomate/,'🍅'],[/gurke/,'🥒'],[/karott|möhre/,'🥕'],[/brokkoli/,'🥦'],[/blumenkohl/,'🥦'],[/spinat/,'🥬'],[/salat|rucola|kohl/,'🥬'],[/paprika/,'🫑'],[/pilz|champignon/,'🍄'],[/kartoffel/,'🥔'],[/süßkartoffel/,'🍠'],[/mais/,'🌽'],[/hähnchen|huhn|chicken|hühnerbrust/,'🍗'],[/rind|beef|hack/,'🥩'],[/pute|turkey/,'🦃'],[/lachs|salmon/,'🐟'],[/thunfisch|tuna/,'🐠'],[/garnele|shrimp/,'🦐'],[/\bei\b|eier|egg/,'🥚'],[/milch|milk/,'🥛'],[/käse|cheese/,'🧀'],[/joghurt|yogurt/,'🥣'],[/quark/,'🥄'],[/butter/,'🧈'],[/brot|bread/,'🍞'],[/brötchen/,'🥖'],[/haferflocken|oat/,'🌾'],[/müsli|granola/,'🥣'],[/reis|rice/,'🍚'],[/pasta|nudel|spaghetti/,'🍝'],[/mandel|cashew|erdnuss|walnuss|nuss/,'🥜'],[/chiasamen|sesam/,'🌱'],[/öl|oil/,'🫙'],[/linsen|bohne|kichererbse/,'🫘'],[/tofu|tempeh/,'🧆'],[/schokolade|chocolate|nutella/,'🍫'],[/chips/,'🥔'],[/honig|honey/,'🍯'],[/protein|whey/,'💪'],[/pizza/,'🍕'],[/burger|hamburger/,'🍔'],[/pommes/,'🍟'],[/sushi/,'🍣'],[/döner/,'🥙'],[/kaffee|coffee|espresso/,'☕'],[/tee|tea/,'🍵'],[/saft|juice/,'🧃'],[/cola/,'🥤'],[/bier|beer/,'🍺'],[/wein|wine/,'🍷'],[/salami|speck|schinken|wurst/,'🍖']];
@@ -1181,21 +1172,17 @@ function addIngToExistingEntry(food){
 
 // ═══════════ PHOTO + RECIPE BUILDER ═══════════
 var _pBarcodeFound=null; // holds barcode result pending confirm
-var _pBarcodeFoundCode='';
 var _pBarcodeReader=null;
 var _pBarcodeActive=false;
 
 function openPhoto(){
   pIng=[];
   _pBarcodeFound=null;
-  _pBarcodeFoundCode='';
-  window._photoB64=null;
+  // Reset all panels
   document.getElementById('pPickArea').style.display='block';
   document.getElementById('pPrevWrap').classList.add('hidden');
   document.getElementById('aBtn').disabled=true;
-  document.getElementById('aBtn').classList.add('hidden');
   document.getElementById('aBtn').textContent='📷 Analysieren';
-  pSetStatus('',false);
   document.getElementById('pIngArea').classList.add('hidden');
   document.getElementById('pMethodBtns').classList.add('hidden');
   document.getElementById('pBarcodeConfirm').classList.add('hidden');
@@ -1215,232 +1202,105 @@ function openPhoto(){
   openOv('photoOv');
 }
 
-function pSetStatus(msg,isError){
-  var el=document.getElementById('pPhotoStatus');
-  if(!el)return;
-  if(!msg){
-    el.textContent='';
-    el.classList.add('hidden');
-    el.style.background='var(--gl)';
-    el.style.border='1.5px solid var(--g3)';
-    el.style.color='var(--mu)';
-    return;
-  }
-  el.textContent=msg;
-  el.classList.remove('hidden');
-  if(isError){
-    el.style.background='#fff3f1';
-    el.style.border='1.5px solid #f3b3a8';
-    el.style.color='#9a3c2f';
-  }else{
-    el.style.background='var(--gl)';
-    el.style.border='1.5px solid var(--g3)';
-    el.style.color='var(--mu)';
-  }
-}
-
 function resetPhotoPanel(){
   document.getElementById('pPrevWrap').classList.add('hidden');
   document.getElementById('pPickArea').style.display='block';
   document.getElementById('aBtn').disabled=true;
-  document.getElementById('aBtn').classList.add('hidden');
   document.getElementById('pBarcodeConfirm').classList.add('hidden');
   document.getElementById('pCam').value='';
   document.getElementById('pGal').value='';
-  _pBarcodeFound=null;
-  _pBarcodeFoundCode='';
-  window._photoB64=null;
-  pSetStatus('',false);
 }
 
 function handlePhoto(e){
   var file=e.target.files[0];if(!file)return;
-  pSetStatus('Foto wird verarbeitet ...',false);
   var reader=new FileReader();
   reader.onload=function(ev){
     var img=new Image();
     img.onload=function(){
-      var c=document.createElement('canvas'),MAX=1200,w=img.width,h=img.height;
+      var c=document.createElement('canvas'),MAX=800,w=img.width,h=img.height;
       if(w>h){if(w>MAX){h=Math.round(h*MAX/w);w=MAX;}}else{if(h>MAX){w=Math.round(w*MAX/h);h=MAX;}}
       c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);
-      var comp=c.toDataURL('image/jpeg',0.82);
+      var comp=c.toDataURL('image/jpeg',0.7);
       window._photoB64=comp.split(',')[1];
       document.getElementById('pPrev').src=comp;
       document.getElementById('pPrevWrap').classList.remove('hidden');
       document.getElementById('pPickArea').style.display='none';
       document.getElementById('aBtn').disabled=false;
-      document.getElementById('aBtn').classList.remove('hidden');
-      pProcessCapturedPhoto(c);
+      // Auto-try barcode detection on still image
+      tryBarcodeOnImage(c);
     };
-    img.onerror=function(){pSetStatus('Das Foto konnte nicht gelesen werden.',true);};
     img.src=ev.target.result;
   };
-  reader.onerror=function(){pSetStatus('Das Foto konnte nicht geladen werden.',true);};
   reader.readAsDataURL(file);
 }
 
-async function pProcessCapturedPhoto(canvas){
-  _pBarcodeFound=null;
-  _pBarcodeFoundCode='';
-  document.getElementById('pBarcodeConfirm').classList.add('hidden');
-  pSetStatus('Barcode wird im Foto gesucht ...',false);
-  try{
-    var code=await detectBarcodeFromCanvas(canvas);
-    if(code){
-      await fetchBarcodeForConfirm(code);
-      return;
+function tryBarcodeOnImage(canvas){
+  if(typeof ZXing==='undefined')return;
+  var hints=new Map();
+  hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS,[
+    ZXing.BarcodeFormat.EAN_13,ZXing.BarcodeFormat.EAN_8,
+    ZXing.BarcodeFormat.UPC_A,ZXing.BarcodeFormat.UPC_E,
+    ZXing.BarcodeFormat.CODE_128
+  ]);
+  var reader=new ZXing.BrowserMultiFormatReader(hints);
+  reader.decodeFromCanvas(canvas).then(function(result){
+    if(result){
+      var code=result.getText();
+      fetchBarcodeForConfirm(code);
     }
-  }catch(e){}
-  if(isOnline){
-    pSetStatus('Kein Barcode erkannt. Foto wird an die KI gesendet ...',false);
-    doAnalyze(true);
-  }else{
-    pSetStatus('Kein Barcode erkannt. Offline ist nur ein Treffer aus dem lokalen Barcode-Speicher möglich.',true);
-  }
+  }).catch(function(){
+    // No barcode found - normal, KI will be used
+  });
 }
 
-async function detectBarcodeFromCanvas(canvas){
-  if('BarcodeDetector' in window){
-    try{
-      var formats=['ean_13','ean_8','upc_a','upc_e','code_128'];
-      var supported=formats;
-      try{
-        if(BarcodeDetector.getSupportedFormats){
-          var sf=await BarcodeDetector.getSupportedFormats();
-          supported=formats.filter(function(f){return sf.indexOf(f)!==-1;});
-        }
-      }catch(e){}
-      if(supported.length){
-        var detector=new BarcodeDetector({formats:supported});
-        var hits=await detector.detect(canvas);
-        if(hits&&hits.length){
-          var raw=(hits[0].rawValue||'').trim();
-          if(raw)return raw;
-        }
-      }
-    }catch(e){}
-  }
-  if(typeof ZXing!=='undefined'){
-    try{
-      var hints=new Map();
-      hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS,[
-        ZXing.BarcodeFormat.EAN_13,ZXing.BarcodeFormat.EAN_8,
-        ZXing.BarcodeFormat.UPC_A,ZXing.BarcodeFormat.UPC_E,
-        ZXing.BarcodeFormat.CODE_128
-      ]);
-      var reader=new ZXing.BrowserMultiFormatReader(hints);
-      var result=await reader.decodeFromCanvas(canvas);
-      if(result){
-        var code=(result.getText()||'').trim();
-        if(code)return code;
-      }
-    }catch(e){}
-  }
-  return '';
-}
-
-async function fetchBarcodeForConfirm(code){
-  _pBarcodeFoundCode=code;
+function fetchBarcodeForConfirm(code){
   var cached=barcodeCache[code];
   if(cached){
-    showBarcodeConfirm(cached,code,true);
+    showBarcodeConfirm(cached);
     return;
   }
-  if(!isOnline){
-    pSetStatus('Barcode erkannt: '+code+'. Dieses Produkt ist offline noch nicht lokal gespeichert.',true);
-    return;
-  }
-  pSetStatus('Barcode erkannt. Zuerst wurde lokal gesucht, jetzt werden Produktdaten über die Barcode-API geladen ...',false);
-  try{
-    var r=await fetch('https://world.openfoodfacts.org/api/v0/product/'+code+'.json');
-    var data=await r.json();
-    if(data.status!==1||!data.product){
-      pSetStatus('Barcode erkannt, aber in der Barcode-API wurde kein Produkt gefunden. Das Foto wird jetzt an die KI zur Schätzung bzw. zum Ablesen der Nährwerte gesendet ...',false);
-      doAnalyze(true);
-      return;
-    }
-    var p=data.product,nm=p.nutriments||{};
-    var name=p.product_name_de||p.product_name||'Unbekannt';
-    var food={name:name,emoji:emo(name),barcode:code,per100:{kcal:nm['energy-kcal_100g']||0,protein:nm['proteins_100g']||0,carbs:nm['carbohydrates_100g']||0,fat:nm['fat_100g']||0}};
-    showBarcodeConfirm(food,code,false);
-  }catch(e){
-    pSetStatus('Produktdaten konnten nicht geladen werden. Das Foto wird jetzt an die KI zur Schätzung bzw. zum Ablesen der Nährwerte gesendet ...',true);
-    doAnalyze(true);
-  }
+  if(!isOnline)return; // no barcode, proceed with KI
+  fetch('https://world.openfoodfacts.org/api/v0/product/'+code+'.json')
+    .then(function(r){return r.json();})
+    .then(function(data){
+      if(data.status!==1||!data.product)return;
+      var p=data.product,nm=p.nutriments||{};
+      var name=p.product_name_de||p.product_name||'Unbekannt';
+      var food={name:name,emoji:emo(name),barcode:code,per100:{kcal:nm['energy-kcal_100g']||0,protein:nm['proteins_100g']||0,carbs:nm['carbohydrates_100g']||0,fat:nm['fat_100g']||0}};
+      barcodeCache[code]=food;saveBarcodeCache();
+      showBarcodeConfirm(food);
+    }).catch(function(){});
 }
 
-function showBarcodeConfirm(food,code,isLocal){
+function showBarcodeConfirm(food){
   _pBarcodeFound=food;
-  _pBarcodeFoundCode=code||food.barcode||'';
   document.getElementById('pBarcodeFoundName').textContent=(food.emoji||'🍽')+' '+food.name;
-  document.getElementById('pBarcodeFoundNutrients').textContent='Barcode: '+(_pBarcodeFoundCode||'–')+' · '+Math.round(food.per100.kcal||0)+' kcal · P'+(food.per100.protein||0)+'g · K'+(food.per100.carbs||0)+'g · F'+(food.per100.fat||0)+'g pro 100g'+(isLocal?' · lokal gespeichert':'');
-  document.getElementById('pBcName').value=food.name||'';
-  document.getElementById('pBcKcal').value=(food.per100&&food.per100.kcal!=null)?food.per100.kcal:'';
-  document.getElementById('pBcProtein').value=(food.per100&&food.per100.protein!=null)?food.per100.protein:'';
-  document.getElementById('pBcCarbs').value=(food.per100&&food.per100.carbs!=null)?food.per100.carbs:'';
-  document.getElementById('pBcFat').value=(food.per100&&food.per100.fat!=null)?food.per100.fat:'';
+  document.getElementById('pBarcodeFoundNutrients').textContent=Math.round(food.per100.kcal)+' kcal · P'+food.per100.protein+'g · K'+food.per100.carbs+'g · F'+food.per100.fat+'g pro 100g';
   document.getElementById('pBarcodeConfirm').classList.remove('hidden');
-  pSetStatus('Bitte prüfen, ob das erkannte Lebensmittel korrekt ist. Du kannst die Daten auch direkt korrigieren und lokal speichern.',false);
 }
 
-function pGetBarcodeFormFood(){
-  var name=(document.getElementById('pBcName').value||'').trim();
-  var kcal=parseFloat(document.getElementById('pBcKcal').value); if(!isFinite(kcal))kcal=0;
-  var protein=parseFloat(document.getElementById('pBcProtein').value); if(!isFinite(protein))protein=0;
-  var carbs=parseFloat(document.getElementById('pBcCarbs').value); if(!isFinite(carbs))carbs=0;
-  var fat=parseFloat(document.getElementById('pBcFat').value); if(!isFinite(fat))fat=0;
-  return {
-    name:name||((_pBarcodeFound&&_pBarcodeFound.name)||'Unbekannt'),
-    emoji:emo(name||((_pBarcodeFound&&_pBarcodeFound.name)||'Lebensmittel')),
-    barcode:_pBarcodeFoundCode||((_pBarcodeFound&&_pBarcodeFound.barcode)||''),
-    per100:{kcal:kcal,protein:protein,carbs:carbs,fat:fat}
-  };
-}
-
-function saveBarcodeFoodOffline(food){
-  if(!food)return;
-  if(food.barcode){
-    barcodeCache[food.barcode]=food;
-    saveBarcodeCache();
-  }
-  cacheFood(food);
-  var idx=customFoods.findIndex(function(f){return (food.barcode&&f.barcode===food.barcode) || (f.name||'').toLowerCase()===(food.name||'').toLowerCase();});
-  if(idx>=0)customFoods[idx]=food; else customFoods.unshift(food);
-  saveX();
-}
-
-function pConfirmBarcode(yes,useEditedValues){
+function pConfirmBarcode(yes){
   document.getElementById('pBarcodeConfirm').classList.add('hidden');
   if(yes&&_pBarcodeFound){
-    var food=useEditedValues?pGetBarcodeFormFood():JSON.parse(JSON.stringify(_pBarcodeFound));
-    if(_pBarcodeFoundCode&&!food.barcode)food.barcode=_pBarcodeFoundCode;
-    if(!food.name)food.name='Unbekannt';
-    if(!food.emoji)food.emoji=emo(food.name);
-    saveBarcodeFoodOffline(food);
-    pIng.push({name:food.name,emoji:food.emoji,amount:100,per100:food.per100,barcode:food.barcode||''});
+    // Add barcode product as ingredient
+    var food=_pBarcodeFound;
+    pIng.push({name:food.name,emoji:food.emoji,amount:100,per100:food.per100});
+    cacheFood(food);
     _pBarcodeFound=null;
-    _pBarcodeFoundCode='';
     pUpdateIngList();
-    pSetStatus(useEditedValues?'Korrigierte Produktdaten wurden lokal gespeichert und werden künftig zuerst offline verwendet.':'Produkt bestätigt und lokal gespeichert. Künftige Scans dieses Barcodes funktionieren auch offline.',false);
     showToast((food.emoji||'🍽')+' '+food.name+' hinzugefügt');
   } else {
+    // User said no or no barcode → run KI analysis
     _pBarcodeFound=null;
-    _pBarcodeFoundCode='';
-    if(isOnline){
-      pSetStatus('Produkt nicht bestätigt. Jetzt werden Barcode-API und danach falls nötig die KI-Fotoanalyse verwendet.',false);
-      doAnalyze(true);
-    }else{
-      pSetStatus('Produkt nicht bestätigt. Offline ist jetzt keine KI-Fotoanalyse möglich.',true);
-    }
+    doAnalyze();
   }
 }
 
-function doAnalyze(autoMode){
+function doAnalyze(){
   if(!window._photoB64)return;
   if(!isOnline){showToast('Foto-Analyse benötigt Internet');return;}
   var btn=document.getElementById('aBtn');
   btn.disabled=true;btn.innerHTML='<span style="display:inline-flex;gap:5px;align-items:center;"><span class="spin"></span>KI analysiert...</span>';
-  if(autoMode)pSetStatus('Die KI analysiert jetzt das Foto ...',false);
   var prompt='Photo of food. List all visible ingredients. Reply ONLY JSON array:\n[{"name":"English food name","emoji":"emoji","g":150}]\nOnly name and grams, no nutrition. Max 8 items.';
   callClaude('claude-sonnet-4-5',[{type:'image',source:{type:'base64',media_type:'image/jpeg',data:window._photoB64}},{type:'text',text:prompt}],200,
     function(text){
@@ -1450,12 +1310,11 @@ function doAnalyze(autoMode){
         lookupNutrients(raw,function(resolved){
           resolved.forEach(function(item){pIng.push(item);});
           pUpdateIngList();
-          btn.disabled=false;btn.textContent='📷 Erneut analysieren';
-          pSetStatus('Die KI hat Zutaten erkannt. Bitte prüfen und bei Bedarf anpassen.',false);
+          btn.disabled=false;btn.textContent='📷 Analysieren';
         });
-      }catch(e){showToast('Fehler beim Parsen');btn.disabled=false;btn.textContent='📷 Erneut analysieren';pSetStatus('Die KI-Antwort konnte nicht verarbeitet werden.',true);}
+      }catch(e){showToast('Fehler beim Parsen');btn.disabled=false;btn.textContent='📷 Erneut';}
     },
-    function(err){showToast('Fehler: '+err);btn.disabled=false;btn.textContent='📷 Erneut analysieren';pSetStatus('Die KI-Fotoanalyse ist fehlgeschlagen.',true);}
+    function(err){showToast('Fehler: '+err);btn.disabled=false;btn.textContent='📷 Erneut';}
   );
 }
 
@@ -1485,6 +1344,9 @@ function pShowMethod(method){
     document.getElementById('pSearchPanel').classList.remove('hidden');
     pDoSearch();
     setTimeout(function(){document.getElementById('pSearchInp').focus();},100);
+  } else if(method==='barcode'){
+    document.getElementById('pBarcodePanel').classList.remove('hidden');
+    pStartBarcode();
   }
 }
 
@@ -1932,11 +1794,21 @@ function addBarcodeFood(){
   showToast((food.emoji||'🍽')+' '+food.name+' hinzugefügt');
 }
 
+function sanitizeClaudeModel(model){
+  var m=(model||'').toString().trim().toLowerCase();
+  if(m==='claude-haiku-4-5') return 'claude-haiku-4-5';
+  if(m==='claude-sonnet-4-5') return 'claude-sonnet-4-5';
+  if(m.indexOf('opus')!==-1) return 'claude-sonnet-4-5';
+  return 'claude-sonnet-4-5';
+}
+
 function callClaude(model,content,maxTok,onOk,onErr){
+  if(!S.apiKey){onErr&&onErr('Bitte zuerst API Key eingeben.');return;}
+  var safeModel=sanitizeClaudeModel(model);
   fetch('https://api.anthropic.com/v1/messages',{
     method:'POST',
     headers:{'Content-Type':'application/json','x-api-key':S.apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-    body:JSON.stringify({model:model,max_tokens:maxTok,temperature:0,messages:[{role:'user',content:content}]})
+    body:JSON.stringify({model:safeModel,max_tokens:maxTok,temperature:0,messages:[{role:'user',content:content}]})
   }).then(function(r){return r.json();}).then(function(d){
     if(d.error)throw new Error(d.error.message);
     onOk(d.content.map(function(c){return c.text||'';}).join(''));
