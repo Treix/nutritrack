@@ -1175,6 +1175,14 @@ var _pBarcodeFound=null; // holds barcode result pending confirm
 var _pBarcodeReader=null;
 var _pBarcodeActive=false;
 
+function mealByTime(){
+  var h=new Date().getHours();
+  if(h<11)return 'breakfast';
+  if(h<16)return 'lunch';
+  if(h<22)return 'dinner';
+  return 'snack';
+}
+
 function openPhoto(){
   pIng=[];
   _pBarcodeFound=null;
