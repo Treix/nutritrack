@@ -338,7 +338,12 @@ button,input,select,textarea{font-family:'Nunito Sans',sans-serif;cursor:pointer
         <div class="panel-title">📋 Neues Rezept erstellen</div>
         <input type="text" class="finp" id="rec_name" placeholder="Rezeptname (z.B. Spaghetti Bolognese)">
         <input type="text" class="finp" id="rec_emoji" placeholder="Emoji (optional)">
-        <div style="font-size:12px;color:var(--mu);margin-bottom:8px;">Suche oben → Lebensmittel antippen → wird als Zutat hinzugefügt</div>
+        <div style="font-size:12px;color:var(--mu);margin-bottom:6px;">Zutaten suchen &amp; hinzufügen:</div>
+        <div style="display:flex;gap:6px;margin-bottom:8px;">
+          <input type="text" class="finp" id="rec_search" placeholder="Zutat suchen..." style="margin:0;flex:1;" onkeydown="if(event.key==='Enter')recSearch()">
+          <button type="button" style="background:var(--g2);color:white;border:none;border-radius:9px;padding:9px 12px;font-weight:700;font-size:13px;white-space:nowrap;" onclick="recSearch()">Suchen</button>
+        </div>
+        <div id="recSearchRes" class="rl" style="max-height:180px;overflow-y:auto;margin-bottom:8px;"></div>
         <div id="recIngList" class="ing-list"></div>
         <div id="recTotal" class="rec-total hidden"></div>
         <button type="button" class="fsave" onclick="saveNewRecipe()">💾 Rezept speichern</button>
@@ -380,6 +385,10 @@ button,input,select,textarea{font-family:'Nunito Sans',sans-serif;cursor:pointer
           <input type="text" class="finp" id="pRecName" placeholder="Rezeptname">
           <div id="pIngList" class="ing-list"></div>
           <div id="pRecTotal" class="rec-total"></div>
+        <div style="display:flex;gap:6px;margin-bottom:4px;">
+          <input type="text" class="finp" id="pAddMore" placeholder="Weitere Zutat hinzufügen..." style="margin:0;flex:1;font-size:13px;padding:8px 10px;" onkeydown="if(event.key==='Enter')addMoreToPhoto()">
+          <button type="button" id="pAddMoreBtn" onclick="addMoreToPhoto()" style="background:var(--g2);color:white;border:none;border-radius:9px;padding:8px 12px;font-size:13px;font-weight:700;white-space:nowrap;display:flex;align-items:center;gap:4px;">＋ KI</button>
+        </div>
         </div>
         <div class="ar" style="margin-top:0;"><input type="number" class="ai2" id="pPortions" value="1" min="0.1" step="0.1"><div class="au">Portion(en)</div></div>
         <button type="button" class="cb2" onclick="addPhotoRecipe()">Als Rezept speichern &amp; eintragen</button>
@@ -404,6 +413,10 @@ button,input,select,textarea{font-family:'Nunito Sans',sans-serif;cursor:pointer
           <input type="text" class="finp" id="cRecName" placeholder="Rezeptname">
           <div id="cIngList" class="ing-list"></div>
           <div id="cRecTotal" class="rec-total"></div>
+        <div style="display:flex;gap:6px;margin-bottom:4px;">
+          <input type="text" class="finp" id="cAddMore" placeholder="Weitere Zutat hinzufügen..." style="margin:0;flex:1;font-size:13px;padding:8px 10px;" onkeydown="if(event.key==='Enter')addMoreToChat()">
+          <button type="button" id="cAddMoreBtn" onclick="addMoreToChat()" style="background:var(--g2);color:white;border:none;border-radius:9px;padding:8px 12px;font-size:13px;font-weight:700;white-space:nowrap;display:flex;align-items:center;gap:4px;">＋ KI</button>
+        </div>
         </div>
         <div class="ar" style="margin-top:0;"><input type="number" class="ai2" id="cPortions" value="1" min="0.1" step="0.1"><div class="au">Portion(en)</div></div>
         <button type="button" class="cb2" onclick="addChatRecipe()">Als Rezept speichern &amp; eintragen</button>
@@ -799,6 +812,11 @@ function showPanel(name){
     p.classList.toggle('hidden',wasOpen&&isThis||!isThis);
     q.classList.toggle('act',!wasOpen&&isThis);
   });
+  // When recipe panel opens: show default ingredient suggestions
+  if(name==='rec'&&!document.getElementById('panelRec').classList.contains('hidden')){
+    document.getElementById('rec_search').value='';
+    recSearch();
+  }
 }
 
 function doSearch(){
@@ -908,9 +926,49 @@ function saveOwnFood(){
 }
 
 // ═══════════ RECIPE BUILDER ═══════════
+function recSearch(){
+  var q=document.getElementById('rec_search').value.trim();
+  // Search local DB + custom foods (no online to save data)
+  var ql=q.toLowerCase().trim();
+  var results=[];
+  var seen={};
+  // Custom foods
+  customFoods.forEach(function(f){
+    var nl=f.name.toLowerCase();
+    if(!ql||nl.includes(ql)||nl.startsWith(ql)){
+      if(!seen[nl]){seen[nl]=true;results.push({name:f.name,emoji:f.emoji,per100:f.per100,badge:'⭐'});}
+    }
+  });
+  // Built-in DB
+  DB.forEach(function(f){
+    var s=fuzzy(f,q);
+    if(s>0||!ql){
+      var k=f.n.toLowerCase();
+      if(!seen[k]){seen[k]=true;results.push({name:f.n,emoji:f.e,per100:{kcal:f.k,protein:f.p,carbs:f.c,fat:f.f},score:s});}
+    }
+  });
+  if(ql)results.sort(function(a,b){return(b.score||0)-(a.score||0);});
+  results=results.slice(0,12);
+  var el=document.getElementById('recSearchRes');
+  if(!results.length){el.innerHTML='<div class="nr" style="padding:10px;">Kein Ergebnis</div>';return;}
+  el.innerHTML=results.map(function(p,i){
+    return'<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:1.5px solid var(--br);border-radius:10px;cursor:pointer;margin-bottom:5px;background:white;" onclick="addToRecBuilder('+JSON.stringify(p).replace(/"/g,"'")+')">'
+      +'<div style="font-size:20px;">'+(p.emoji||'🍽')+'</div>'
+      +'<div style="flex:1;min-width:0;"><div style="font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+p.name+'</div>'
+      +'<div style="font-size:11px;color:var(--mu);">'+Math.round(p.per100.kcal)+' kcal · P'+p.per100.protein+'g</div></div>'
+      +'<div style="font-size:18px;color:var(--g2);font-weight:900;">＋</div>'
+      +'</div>';
+  }).join('');
+}
+
 function addToRecBuilder(food){
+  // food may come as string from onclick attribute
+  if(typeof food==='string')try{food=JSON.parse(food);}catch(e){return;}
   recIng.push({name:food.name,emoji:food.emoji||emo(food.name),amount:100,per100:food.per100});
   renderRecBuilder();
+  // Clear search after adding
+  document.getElementById('rec_search').value='';
+  document.getElementById('recSearchRes').innerHTML='';
 }
 function renderRecBuilder(){
   document.getElementById('recIngList').innerHTML=renderIngHTML(recIng,'rec');
@@ -1074,6 +1132,50 @@ function updateChatTotal(){
   var p=parseFloat(document.getElementById('cPortions').value)||1;
   document.getElementById('cRecTotal').textContent='1 Portion: '+totalStr(t)+(p!==1?'  ·  '+p+'× = '+totalStr({kcal:t.kcal*p,protein:t.protein*p,carbs:t.carbs*p,fat:t.fat*p}):'');
 }
+function addMoreToPhoto(){
+  var msg=document.getElementById('pAddMore').value.trim();
+  if(!msg)return;
+  if(!isOnline){showToast('Internet benötigt');return;}
+  var btn=document.getElementById('pAddMoreBtn');
+  btn.innerHTML='<span class="spin"></span>';btn.disabled=true;
+  var prompt='Add this food to a meal: "'+msg+'"
+Reply ONLY JSON array with ONE or more items:
+[{"name":"German name","emoji":"emoji","g":100,"p100":{"k":89,"p":1.1,"c":23,"f":0.3}}]';
+  callClaude('claude-haiku-4-5',[{type:'text',text:prompt}],150,
+    function(text){
+      var items=parseIngJSON(text);
+      items.forEach(function(item){pIng.push(item);});
+      renderPhotoIng();
+      document.getElementById('pAddMore').value='';
+      btn.innerHTML='＋ KI';btn.disabled=false;
+      showToast('✓ '+items.map(function(i){return i.name;}).join(', ')+' hinzugefügt');
+    },
+    function(err){showToast('Fehler: '+err);btn.innerHTML='＋ KI';btn.disabled=false;}
+  );
+}
+
+function addMoreToChat(){
+  var msg=document.getElementById('cAddMore').value.trim();
+  if(!msg)return;
+  if(!isOnline){showToast('Internet benötigt');return;}
+  var btn=document.getElementById('cAddMoreBtn');
+  btn.innerHTML='<span class="spin"></span>';btn.disabled=true;
+  var prompt='Add this food to a meal: "'+msg+'"
+Reply ONLY JSON array with ONE or more items:
+[{"name":"German name","emoji":"emoji","g":100,"p100":{"k":89,"p":1.1,"c":23,"f":0.3}}]';
+  callClaude('claude-haiku-4-5',[{type:'text',text:prompt}],150,
+    function(text){
+      var items=parseIngJSON(text);
+      items.forEach(function(item){cIng.push(item);});
+      renderChatIng();
+      document.getElementById('cAddMore').value='';
+      btn.innerHTML='＋ KI';btn.disabled=false;
+      showToast('✓ '+items.map(function(i){return i.name;}).join(', ')+' hinzugefügt');
+    },
+    function(err){showToast('Fehler: '+err);btn.innerHTML='＋ KI';btn.disabled=false;}
+  );
+}
+
 function addChatRecipe(){
   if(!cIng.length){showToast('Keine Zutaten');return;}
   var name=document.getElementById('cRecName').value.trim()||'KI-Gericht';
