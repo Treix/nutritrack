@@ -1019,6 +1019,13 @@ function addIngToExistingEntry(food){
 }
 
 // ═══════════ PHOTO ═══════════
+function mealByTime(){
+  var h=new Date().getHours();
+  if(h>=5&&h<11)return'breakfast';
+  if(h>=11&&h<14)return'lunch';
+  if(h>=14&&h<18)return'snack';
+  return'dinner';
+}
 function openPhoto(){
   pIng=[];
   document.getElementById('pPrevWrap').classList.add('hidden');
@@ -1026,6 +1033,7 @@ function openPhoto(){
   document.getElementById('aBtn').disabled=true;document.getElementById('aBtn').textContent='📷 KI-Analyse starten';
   document.getElementById('photoRecArea').classList.add('hidden');
   document.getElementById('pCam').value='';document.getElementById('pGal').value='';
+  document.getElementById('pMeal').value=mealByTime();
   openOv('photoOv');
 }
 function resetPhoto(){document.getElementById('pPrevWrap').classList.add('hidden');document.getElementById('pPickArea').style.display='block';document.getElementById('aBtn').disabled=true;document.getElementById('photoRecArea').classList.add('hidden');pIng=[];}
@@ -1057,14 +1065,22 @@ function doAnalyze(){
   btn.disabled=true;btn.innerHTML='<span style="display:inline-flex;gap:5px;align-items:center;"><span class="spin"></span>Analysiere...</span>';
   document.getElementById('photoRecArea').classList.add('hidden');
   // Use claude-haiku-4-5 for cheaper/faster image recognition
-  var prompt='Photo of food. List all visible ingredients. Reply ONLY JSON array:\n[{"name":"German name","emoji":"emoji","g":150,"p100":{"k":89,"p":1.1,"c":23,"f":0.3}}]\ng=grams in photo, p100=per 100g. Max 8 items.';
-  callClaude('claude-haiku-4-5',[{type:'image',source:{type:'base64',media_type:'image/jpeg',data:window._photoB64}},{type:'text',text:prompt}],350,
+  // Step 1: KI identifies food names + grams only (minimal tokens)
+  var prompt='Photo of food. List all visible ingredients with estimated grams. Reply ONLY JSON array, no markdown:\n[{"name":"English food name","emoji":"emoji","g":150}]\nMax 8 items. Only name and grams, no nutrition.';
+  callClaude('claude-sonnet-4-5',[{type:'image',source:{type:'base64',media_type:'image/jpeg',data:window._photoB64}},{type:'text',text:prompt}],200,
     function(text){
-      pIng=parseIngJSON(text);
-      btn.disabled=false;btn.textContent='🔄 Neues Foto';btn.onclick=function(){resetPhoto();btn.onclick=doAnalyze;};
-      var name=document.getElementById('pRecName').value;
-      if(!name)document.getElementById('pRecName').value='Erkanntes Gericht';
-      renderPhotoIng();document.getElementById('photoRecArea').classList.remove('hidden');
+      try{
+        var match=text.match(/\[[\s\S]*\]/);
+        if(!match)throw new Error('no json');
+        var raw=JSON.parse(match[0]);
+        // Step 2: look up each food in OFF, fall back to KI estimate
+        lookupNutrients(raw,function(resolved){
+          pIng=resolved;
+          btn.disabled=false;btn.textContent='🔄 Neues Foto';btn.onclick=function(){resetPhoto();btn.onclick=doAnalyze;};
+          if(!document.getElementById('pRecName').value)document.getElementById('pRecName').value='Erkanntes Gericht';
+          renderPhotoIng();document.getElementById('photoRecArea').classList.remove('hidden');
+        });
+      }catch(e){showToast('Fehler beim Parsen');btn.disabled=false;btn.textContent='🔄 Erneut';}
     },
     function(err){showToast('Fehler: '+err);btn.disabled=false;btn.textContent='🔄 Erneut';}
   );
@@ -1098,6 +1114,7 @@ function openChat(){
   document.getElementById('chatMsgs').innerHTML='<div class="cm h">Beschreibe was du gegessen hast, z.B.:<br>„Spaghetti Bolognese mit Parmesan"</div>';
   document.getElementById('chatRecArea').classList.add('hidden');
   document.getElementById('chatInp').value='';
+  document.getElementById('chatMeal').value=mealByTime();
   openOv('chatOv');
   setTimeout(function(){document.getElementById('chatInp').focus();},350);
 }
@@ -1110,15 +1127,27 @@ function sendChat(){
   document.getElementById('chatSendBtn').disabled=true;
   document.getElementById('chatRecArea').classList.add('hidden');
   msgs.scrollTop=msgs.scrollHeight;
-  var prompt='User ate: "'+msg+'"\nList each ingredient separately as JSON array:\n[{"name":"German name","emoji":"emoji","g":150,"p100":{"k":89,"p":1.1,"c":23,"f":0.3}}]\ng=estimated grams eaten, p100=per 100g. Max 8 items.';
-  callClaude('claude-haiku-4-5',[{type:'text',text:prompt}],350,
+  // Step 1: KI identifies food names + grams only
+  var prompt='User ate: '+msg+'\nList each ingredient as JSON array, no markdown:\n[{"name":"English food name","emoji":"emoji","g":150}]\nOnly name and grams, no nutrition. Max 8 items.';
+  callClaude('claude-haiku-4-5',[{type:'text',text:prompt}],150,
     function(text){
-      cIng=parseIngJSON(text);
-      msgs.innerHTML+='<div class="cm a">✨ '+cIng.length+' Zutaten erkannt. Bitte prüfe unten.</div>';
-      msgs.scrollTop=msgs.scrollHeight;
-      if(!document.getElementById('cRecName').value)document.getElementById('cRecName').value=msg.slice(0,40);
-      renderChatIng();document.getElementById('chatRecArea').classList.remove('hidden');
-      document.getElementById('chatSendBtn').disabled=false;
+      try{
+        var match=text.match(/\[[\s\S]*\]/);
+        if(!match)throw new Error('no json');
+        var raw=JSON.parse(match[0]);
+        msgs.innerHTML+='<div class="cm a">✨ Suche Nährwerte für '+raw.length+' Zutaten...</div>';
+        msgs.scrollTop=msgs.scrollHeight;
+        // Step 2: look up nutrients in OFF
+        lookupNutrients(raw,function(resolved){
+          cIng=resolved;
+          if(!document.getElementById('cRecName').value)document.getElementById('cRecName').value=msg.slice(0,40);
+          renderChatIng();document.getElementById('chatRecArea').classList.remove('hidden');
+          document.getElementById('chatSendBtn').disabled=false;
+        });
+      }catch(e){
+        msgs.innerHTML+='<div class="cm a">❌ Fehler beim Parsen</div>';
+        document.getElementById('chatSendBtn').disabled=false;
+      }
     },
     function(err){msgs.innerHTML+='<div class="cm a">❌ Fehler: '+err+'</div>';document.getElementById('chatSendBtn').disabled=false;}
   );
@@ -1195,6 +1224,90 @@ function parseIngJSON(text){
     });
   }catch(e){return[];}
 }
+// ═══ NUTRIENT LOOKUP: OFF first, KI estimate as fallback ═══
+function lookupNutrients(rawItems, onDone){
+  var results=[];
+  var pending=rawItems.length;
+  if(!pending){onDone([]);return;}
+
+  rawItems.forEach(function(item){
+    var name=item.name||'';
+    var grams=item.g||item.estimatedGrams||100;
+    var emoji=item.emoji||emo(name);
+
+    // 1. Check local DB first (zero cost)
+    var localMatch=findInLocalDB(name);
+    if(localMatch){
+      results.push({name:localMatch.n,emoji:localMatch.e,amount:grams,per100:{kcal:localMatch.k,protein:localMatch.p,carbs:localMatch.c,fat:localMatch.f}});
+      pending--;if(!pending)onDone(results);
+      return;
+    }
+
+    // 2. Try Open Food Facts if online
+    if(isOnline){
+      var proxy='https://corsproxy.io/?';
+      var url='https://world.openfoodfacts.org/cgi/search.pl?search_terms='+encodeURIComponent(name)+'&search_simple=1&action=process&json=1&page_size=5&fields=product_name,nutriments';
+      fetch(proxy+encodeURIComponent(url))
+        .then(function(r){return r.json();})
+        .then(function(data){
+          var products=(data.products||[]).filter(function(p){
+            var nm=p.nutriments||{};
+            return (nm['energy-kcal_100g']||0)>0;
+          });
+          if(products.length>0){
+            var p=products[0],nm=p.nutriments||{};
+            results.push({name:name,emoji:emoji,amount:grams,per100:{kcal:nm['energy-kcal_100g']||0,protein:nm['proteins_100g']||0,carbs:nm['carbohydrates_100g']||0,fat:nm['fat_100g']||0},source:'off'});
+          } else {
+            // 3. Fallback: KI estimate for this single item
+            results.push(kiEstimate(name,emoji,grams));
+          }
+          pending--;if(!pending)onDone(results);
+        })
+        .catch(function(){
+          results.push(kiEstimate(name,emoji,grams));
+          pending--;if(!pending)onDone(results);
+        });
+    } else {
+      // Offline: use KI estimate from parseIngJSON fallback values
+      results.push(kiEstimate(name,emoji,grams));
+      pending--;if(!pending)onDone(results);
+    }
+  });
+}
+
+function findInLocalDB(name){
+  var nl=name.toLowerCase();
+  // Try exact match first, then partial
+  for(var i=0;i<DB.length;i++){
+    if(DB[i].n.toLowerCase()===nl)return DB[i];
+  }
+  for(var i=0;i<DB.length;i++){
+    var s=(DB[i].s||'').toLowerCase();
+    if(DB[i].n.toLowerCase().includes(nl)||nl.includes(DB[i].n.toLowerCase())||s.includes(nl))return DB[i];
+  }
+  return null;
+}
+
+function kiEstimate(name,emoji,grams){
+  // Generic fallback estimates by food category
+  var nl=name.toLowerCase();
+  var per100={kcal:100,protein:3,carbs:15,fat:2}; // generic default
+  if(/chicken|hähnchen|poultry|turkey|pute/.test(nl)) per100={kcal:165,protein:31,carbs:0,fat:4};
+  else if(/beef|rind|steak|hack/.test(nl)) per100={kcal:215,protein:26,carbs:0,fat:12};
+  else if(/fish|lachs|salmon|tuna|thun/.test(nl)) per100={kcal:150,protein:22,carbs:0,fat:7};
+  else if(/rice|reis/.test(nl)) per100={kcal:130,protein:2.7,carbs:28,fat:0.3};
+  else if(/pasta|nudel|spaghetti/.test(nl)) per100={kcal:158,protein:5.5,carbs:31,fat:0.9};
+  else if(/bread|brot|toast/.test(nl)) per100={kcal:255,protein:9,carbs:47,fat:3};
+  else if(/vegetable|gemüse|salad|salat|vegetab/.test(nl)) per100={kcal:30,protein:2,carbs:6,fat:0.3};
+  else if(/fruit|obst|apple|apfel|banana|banane/.test(nl)) per100={kcal:60,protein:0.8,carbs:15,fat:0.2};
+  else if(/cheese|käse/.test(nl)) per100={kcal:350,protein:25,carbs:2,fat:28};
+  else if(/egg|ei/.test(nl)) per100={kcal:155,protein:13,carbs:1,fat:11};
+  else if(/milk|milch|yogurt|joghurt/.test(nl)) per100={kcal:60,protein:3.5,carbs:5,fat:3};
+  else if(/oil|öl|butter/.test(nl)) per100={kcal:750,protein:0,carbs:0,fat:83};
+  else if(/sauce|soße/.test(nl)) per100={kcal:80,protein:2,carbs:10,fat:3};
+  return{name:name,emoji:emoji,amount:grams,per100:per100,source:'estimate'};
+}
+
 function callClaude(model,content,maxTok,onOk,onErr){
   fetch('https://api.anthropic.com/v1/messages',{
     method:'POST',
