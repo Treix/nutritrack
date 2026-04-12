@@ -19,9 +19,9 @@
   --tx:#18291f;--mu:#7a9487;--br:#e0ece6;
   --r:18px;--sh:0 2px 20px rgba(45,125,82,.09);
 }
-*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;touch-action:manipulation;}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 body{font-family:'Nunito Sans',sans-serif;background:var(--bg);color:var(--tx);min-height:100vh;max-width:430px;margin:0 auto;padding-bottom:84px;overflow-x:hidden;}
-button,input,select,textarea{font-family:'Nunito Sans',sans-serif;cursor:pointer;font-size:16px;}
+button,input,select,textarea{font-family:'Nunito Sans',sans-serif;cursor:pointer;}
 .screen{display:none;flex-direction:column;min-height:100vh;}
 .screen.active{display:flex;}
 .hidden{display:none!important;}
@@ -109,7 +109,7 @@ button,input,select,textarea{font-family:'Nunito Sans',sans-serif;cursor:pointer
 .cb{width:54px;height:54px;border-radius:50%;background:linear-gradient(135deg,var(--g1),var(--g2));border:3px solid white;color:white;font-size:22px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(76,175,125,.4);position:relative;top:-13px;}
 .cb:active{transform:scale(.93);}
 /* OVERLAYS */
-.ov{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:300;display:none;align-items:flex-end;justify-content:center;backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);}
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:300;display:none;align-items:flex-end;justify-content:center;backdrop-filter:blur(3px);}
 .ov.open{display:flex;}
 .mod{background:white;border-radius:24px 24px 0 0;width:100%;max-width:430px;max-height:92vh;overflow-y:auto;animation:su .3s cubic-bezier(.4,0,.2,1);}
 @keyframes su{from{transform:translateY(100%);}to{transform:translateY(0);}}
@@ -370,7 +370,7 @@ button,input,select,textarea{font-family:'Nunito Sans',sans-serif;cursor:pointer
       <div id="panelBar" class="panel hidden" style="background:#1a1a2e;border-color:#2d7d52;">
         <div class="panel-title" style="color:#4caf7d;">📷 Barcode scannen</div>
         <div id="barcodeWrap" class="barcode-wrap hidden">
-          <video id="barcodeVideo" playsinline muted autoplay></video>
+          <video id="barcodeVideo" playsinline></video>
           <div class="barcode-overlay">
             <div style="width:70%;height:50%;border:2px solid var(--g2);border-radius:8px;position:relative;">
               <div class="barcode-line"></div>
@@ -385,7 +385,7 @@ button,input,select,textarea{font-family:'Nunito Sans',sans-serif;cursor:pointer
 
       <div id="searchRes" class="rl"></div>
       <div id="addSec" class="hidden">
-        <div class="ar"><input type="number" class="ai2" id="amtInp" value="100" min="1" step="any"><div class="au" id="amtUnit">Gramm</div></div>
+        <div class="ar"><input type="number" class="ai2" id="amtInp" value="100" min="1"><div class="au" id="amtUnit">Gramm</div></div>
         <button type="button" class="cb2" onclick="confirmAdd()">Hinzufügen ✓</button>
       </div>
     </div>
@@ -412,7 +412,7 @@ button,input,select,textarea{font-family:'Nunito Sans',sans-serif;cursor:pointer
           <div id="pRecTotal" class="rec-total"></div>
         </div>
         <div class="ar" style="margin-top:0;margin-bottom:12px;">
-          <input type="number" class="ai2" id="pPortions" value="1" min="0.1" step="any">
+          <input type="number" class="ai2" id="pPortions" value="1" min="0.1" step="0.1">
           <div class="au">Portion(en)</div>
         </div>
         <button type="button" class="cb2" style="margin-bottom:12px;" onclick="addPhotoRecipe()">💾 Rezept speichern &amp; eintragen</button>
@@ -483,7 +483,7 @@ button,input,select,textarea{font-family:'Nunito Sans',sans-serif;cursor:pointer
 
       <div id="pBarcodePanel" class="hidden">
         <div id="pBarcodeWrap" class="barcode-wrap hidden">
-          <video id="pBarcodeVideo" playsinline muted autoplay></video>
+          <video id="pBarcodeVideo" playsinline></video>
           <div class="barcode-overlay">
             <div style="width:70%;height:50%;border:2px solid var(--g2);border-radius:8px;position:relative;">
               <div class="barcode-line"></div>
@@ -539,7 +539,7 @@ button,input,select,textarea{font-family:'Nunito Sans',sans-serif;cursor:pointer
           <button type="button" id="cAddMoreBtn" onclick="addMoreToChat()" style="background:var(--g2);color:white;border:none;border-radius:9px;padding:8px 12px;font-size:13px;font-weight:700;white-space:nowrap;display:flex;align-items:center;gap:4px;">＋ KI</button>
         </div>
         </div>
-        <div class="ar" style="margin-top:0;"><input type="number" class="ai2" id="cPortions" value="1" min="0.1" step="any"><div class="au">Portion(en)</div></div>
+        <div class="ar" style="margin-top:0;"><input type="number" class="ai2" id="cPortions" value="1" min="0.1" step="0.1"><div class="au">Portion(en)</div></div>
         <button type="button" class="cb2" onclick="addChatRecipe()">Als Rezept speichern &amp; eintragen</button>
       </div>
       <div class="chat-row">
@@ -608,7 +608,7 @@ button,input,select,textarea{font-family:'Nunito Sans',sans-serif;cursor:pointer
       <!-- Barcode -->
       <div id="erBarcodePanel" class="hidden">
         <div id="erBarcodeWrap" class="barcode-wrap hidden">
-          <video id="erBarcodeVideo" playsinline muted autoplay></video>
+          <video id="erBarcodeVideo" playsinline></video>
           <div class="barcode-overlay"><div style="width:70%;height:50%;border:2px solid var(--g2);border-radius:8px;position:relative;"><div class="barcode-line"></div></div></div>
           <div class="barcode-hint">Barcode in den Rahmen halten</div>
         </div>
@@ -771,12 +771,10 @@ window.addEventListener('DOMContentLoaded',function(){
   if(S.apiKey)showMain();
   // Service worker for offline
   if('serviceWorker' in navigator){
-    navigator.serviceWorker.register('/nutritrack/sw.js',{scope:'/nutritrack/'}).then(function(){
+    var sw='var C="nt-v6";self.addEventListener("install",e=>{self.skipWaiting();});self.addEventListener("activate",e=>{self.clients.claim();});self.addEventListener("fetch",e=>{var u=e.request.url;if(u.includes("anthropic")||u.includes("corsproxy")||u.includes("openfoodfacts")||u.includes("fonts.g")){e.respondWith(fetch(e.request).catch(()=>new Response("",{status:503})));return;}e.respondWith(caches.match(e.request).then(c=>{if(c)return c;return fetch(e.request).then(r=>{if(r.ok){var cl=r.clone();caches.open(C).then(ca=>ca.put(e.request,cl));}return r;}).catch(()=>caches.match("/nutritrack/")||caches.match("/nutritrack/index.html"));}));});';
+    navigator.serviceWorker.register(URL.createObjectURL(new Blob([sw],{type:'application/javascript'}))).then(function(){
       if(caches)caches.open('nt-v6').then(function(c){c.add(window.location.href).catch(function(){});});
-    }).catch(function(){
-      // Fallback for local dev
-      navigator.serviceWorker.register('./sw.js').catch(function(){});
-    });
+    }).catch(function(){});
   }
 });
 function updBadge(){var b=document.getElementById('offBadge');if(b)b.classList.toggle('hidden',isOnline);}
@@ -859,7 +857,7 @@ function renderEditBody(e){
     var t=ingTotal(e.ingredients||[]);
     var p=e.portions||1;
     body.innerHTML='<label class="lbl">Portionen</label>'
-      +'<div class="ar" style="margin-top:0;"><input type="number" class="ai2" id="ee_p" step="any" value="'+p+'" min="0.1" step="0.1" onchange="updateEditPortions(this.value)"><div class="au">Portion(en)</div></div>'
+      +'<div class="ar" style="margin-top:0;"><input type="number" class="ai2" id="ee_p" value="'+p+'" min="0.1" step="0.1" onchange="updateEditPortions(this.value)"><div class="au">Portion(en)</div></div>'
       +'<div id="ee_total" class="rec-total" style="margin-top:10px;">1 Portion: '+totalStr(t)+'<br>'+p+'× = '+totalStr({kcal:t.kcal*p,protein:t.protein*p,carbs:t.carbs*p,fat:t.fat*p})+'</div>'
       +'<label class="lbl" style="margin-top:10px;">Zutaten</label>'
       +'<div id="ee_ing" class="ing-list">'+renderIngHTML(e.ingredients||[],'ee')+'</div>'
@@ -890,7 +888,7 @@ function renderIngHTML(ings,pfx){
     return'<div class="ing-item" id="'+pfx+'_i'+i+'">'
       +'<div class="ing-e">'+(ing.emoji||'🍽')+'</div>'
       +'<div class="ing-n">'+ing.name+'</div>'
-      +'<input type="number" class="ing-amt" value="'+amtVal+'" min="1" placeholder="g?" style="'+borderStyle+'" step="any" onchange="'+chgClick+'">'
+      +'<input type="number" class="ing-amt" value="'+amtVal+'" min="1" placeholder="g?" style="'+borderStyle+'" onchange="'+chgClick+'">'
       +'<div class="ing-u">g</div>'
       +warn
       +'<button type="button" class="ing-del" onclick="'+delClick+'">✕</button>'
@@ -1630,7 +1628,7 @@ function pSendChat(){
   if(!isOnline){showToast('Internet benötigt');return;}
   var btn=document.getElementById('pChatBtn');
   btn.innerHTML='<span class="spin"></span>';btn.disabled=true;
-  var prompt='Food item: '+msg+'\nReply ONLY JSON array:\n[{"name":"German name","emoji":"emoji","g":100}]\nOne item, only name and grams.';
+  var prompt='Lebensmittel: '+msg+'\nAntworte NUR mit JSON-Array auf Deutsch:\n[{"name":"Deutscher Name","emoji":"Emoji","g":100}]\nJedes Lebensmittel einzeln, nur Name und Gramm.';
   callClaude('claude-haiku-4-5',[{type:'text',text:prompt}],100,
     function(text){
       try{
@@ -1721,7 +1719,7 @@ function sendChat(){
   document.getElementById('chatRecArea').classList.add('hidden');
   msgs.scrollTop=msgs.scrollHeight;
   // Step 1: KI identifies food names + grams only
-  var prompt='User ate: '+msg+'\nList each ingredient as JSON array, no markdown:\n[{"name":"English food name","emoji":"emoji","g":150}]\nOnly name and grams, no nutrition. Max 8 items.';
+  var prompt='Gegessen: '+msg+'\nAlle Zutaten einzeln auf Deutsch als JSON-Array:\n[{"name":"Deutscher Name","emoji":"Emoji","g":150}]\nNur Name und Gramm, realistisch schätzen. Max 8 Einträge.';
   callClaude('claude-haiku-4-5',[{type:'text',text:prompt}],150,
     function(text){
       try{
@@ -2230,7 +2228,7 @@ function erSendChat(){
   if(!isOnline){showToast('Internet benötigt');return;}
   var btn=document.getElementById('erChatBtn');
   btn.innerHTML='<span class="spin"></span>';btn.disabled=true;
-  var prompt='Food item: '+msg+'\nReply ONLY JSON array:\n[{"name":"German name","emoji":"emoji","g":100}]\nOne item, only name and grams.';
+  var prompt='Lebensmittel: '+msg+'\nAntworte NUR mit JSON-Array auf Deutsch:\n[{"name":"Deutscher Name","emoji":"Emoji","g":100}]\nJedes Lebensmittel einzeln, nur Name und Gramm.';
   callClaude('claude-haiku-4-5',[{type:'text',text:prompt}],100,
     function(text){
       try{
@@ -2259,7 +2257,7 @@ function erHandlePhoto(e){
       var b64=c.toDataURL('image/jpeg',0.7).split(',')[1];
       document.getElementById('erAnalyzing').classList.remove('hidden');
       if(!isOnline){showToast('Internet benötigt');document.getElementById('erAnalyzing').classList.add('hidden');return;}
-      var prompt='Photo of food. List all visible ingredients. Reply ONLY JSON array:\n[{"name":"English food name","emoji":"emoji","g":150}]\nOnly name and grams. Max 6 items.';
+      var prompt='Essensfoto analysieren. Alle sichtbaren Zutaten einzeln auf Deutsch. Nur JSON-Array:\n[{"name":"Deutscher Name","emoji":"Emoji","g":150}]\nNur Name und Gramm, realistisch schätzen. Max 6 Einträge.';
       callClaude('claude-sonnet-4-5',[{type:'image',source:{type:'base64',media_type:'image/jpeg',data:b64}},{type:'text',text:prompt}],200,
         function(text){
           try{
@@ -2418,7 +2416,7 @@ function pSendChat(){
   if(!isOnline){showToast('Internet benötigt');return;}
   var btn=document.getElementById('pChatBtn');
   btn.innerHTML='<span class="spin"></span>';btn.disabled=true;
-  var prompt='Food item: '+msg+'\nReply ONLY JSON array:\n[{"name":"German name","emoji":"emoji","g":100}]\nOne item, only name and grams.';
+  var prompt='Lebensmittel: '+msg+'\nAntworte NUR mit JSON-Array auf Deutsch:\n[{"name":"Deutscher Name","emoji":"Emoji","g":100}]\nJedes Lebensmittel einzeln, nur Name und Gramm.';
   callClaude('claude-haiku-4-5',[{type:'text',text:prompt}],100,
     function(text){
       try{
@@ -2560,7 +2558,7 @@ function erSendChat(){
   if(!isOnline){showToast('Internet benötigt');return;}
   var btn=document.getElementById('erChatBtn');
   btn.innerHTML='<span class="spin"></span>';btn.disabled=true;
-  var prompt='Food item: '+msg+'\nReply ONLY JSON array:\n[{"name":"German name","emoji":"emoji","g":100}]\nOne item, only name and grams.';
+  var prompt='Lebensmittel: '+msg+'\nAntworte NUR mit JSON-Array auf Deutsch:\n[{"name":"Deutscher Name","emoji":"Emoji","g":100}]\nJedes Lebensmittel einzeln, nur Name und Gramm.';
   callClaude('claude-haiku-4-5',[{type:'text',text:prompt}],100,
     function(text){
       try{
@@ -2589,7 +2587,7 @@ function erHandlePhoto(e){
       var b64=c.toDataURL('image/jpeg',0.7).split(',')[1];
       document.getElementById('erAnalyzing').classList.remove('hidden');
       if(!isOnline){showToast('Internet benötigt');document.getElementById('erAnalyzing').classList.add('hidden');return;}
-      var prompt='Photo of food. List all visible ingredients. Reply ONLY JSON array:\n[{"name":"English food name","emoji":"emoji","g":150}]\nOnly name and grams. Max 6 items.';
+      var prompt='Essensfoto analysieren. Alle sichtbaren Zutaten einzeln auf Deutsch. Nur JSON-Array:\n[{"name":"Deutscher Name","emoji":"Emoji","g":150}]\nNur Name und Gramm, realistisch schätzen. Max 6 Einträge.';
       callClaude('claude-sonnet-4-5',[{type:'image',source:{type:'base64',media_type:'image/jpeg',data:b64}},{type:'text',text:prompt}],200,
         function(text){
           try{
