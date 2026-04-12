@@ -871,8 +871,45 @@ function renderEditBody(e){
       +'<div id="ee_total" class="rec-total" style="margin-top:10px;">1 Portion: '+totalStr(t)+'<br>'+p+'× = '+totalStr({kcal:t.kcal*p,protein:t.protein*p,carbs:t.carbs*p,fat:t.fat*p})+'</div>'
       +'<label class="lbl" style="margin-top:10px;">Zutaten</label>'
       +'<div id="ee_ing" class="ing-list">'+renderIngHTML(e.ingredients||[],'ee')+'</div>'
-      +'<button type="button" class="seb" onclick="openAddIngToEntry()">+ Zutat hinzufügen</button>'
-      +'<button type="button" class="cb2" onclick="saveEditEntry()">Speichern ✓</button>'
+      +'<div style="border-top:1px solid var(--br);padding-top:10px;margin-top:4px;margin-bottom:8px;font-size:12px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;">Zutat hinzufügen</div>'
+      +'<div class="qbtns" style="margin-bottom:8px;">'
+        +'<button type="button" class="qbtn" onclick="eeShowMethod(\'search\')"><span>🔍</span>Suche</button>'
+        +'<button type="button" class="qbtn" onclick="eeShowMethod(\'chat\')"><span>💬</span>KI-Chat</button>'
+        +'<button type="button" class="qbtn" onclick="eeShowMethod(\'foto\')"><span>📷</span>Foto</button>'
+        +'<button type="button" class="qbtn" onclick="eeShowMethod(\'barcode\')"><span>📊</span>Barcode</button>'
+      +'</div>'
+      +'<div id="eeSearchPanel" class="hidden">'
+        +'<div style="display:flex;gap:6px;margin-bottom:8px;">'
+          +'<input type="text" class="finp" id="eeSearchInp" placeholder="Suchen..." style="margin:0;flex:1;" onkeydown="if(event.key===\'Enter\')eeDoSearch()">'
+          +'<button type="button" onclick="eeDoSearch()" style="background:var(--g2);color:white;border:none;border-radius:9px;padding:9px 12px;font-weight:700;font-size:13px;">Suchen</button>'
+        +'</div>'
+        +'<div id="eeSearchRes" class="rl" style="max-height:160px;overflow-y:auto;margin-bottom:8px;"></div>'
+      +'</div>'
+      +'<div id="eeChatPanel" class="hidden">'
+        +'<div style="display:flex;gap:6px;margin-bottom:8px;">'
+          +'<input type="text" class="finp" id="eeChatInp" placeholder="Zutat beschreiben..." style="margin:0;flex:1;" onkeydown="if(event.key===\'Enter\')eeSendChat()">'
+          +'<button type="button" id="eeChatBtn" onclick="eeSendChat()" style="background:var(--g2);color:white;border:none;border-radius:9px;padding:9px 12px;font-weight:700;font-size:13px;">➤</button>'
+        +'</div>'
+      +'</div>'
+      +'<div id="eeFotoPanel" class="hidden">'
+        +'<div class="pbtns" style="margin-bottom:8px;">'
+          +'<button type="button" class="pbtn" onclick="document.getElementById(\'eeCam\').click()"><span>📷</span>Kamera</button>'
+          +'<button type="button" class="pbtn" onclick="document.getElementById(\'eeGal\').click()"><span>🖼️</span>Galerie</button>'
+        +'</div>'
+        +'<input type="file" id="eeCam" accept="image/*" capture="environment" style="display:none" onchange="eeHandlePhoto(event)">'
+        +'<input type="file" id="eeGal" accept="image/*" style="display:none" onchange="eeHandlePhoto(event)">'
+        +'<div id="eeAnalyzing" class="hidden" style="text-align:center;font-size:13px;color:var(--mu);padding:8px;">KI analysiert...</div>'
+      +'</div>'
+      +'<div id="eeBarcodePanel" class="hidden">'
+        +'<div id="eeBarcodeWrap" class="barcode-wrap hidden">'
+          +'<video id="eeBarcodeVideo" playsinline></video>'
+          +'<div class="barcode-overlay"><div style="width:70%;height:50%;border:2px solid var(--g2);border-radius:8px;position:relative;"><div class="barcode-line"></div></div></div>'
+          +'<div class="barcode-hint">Barcode in den Rahmen halten</div>'
+        +'</div>'
+        +'<button type="button" id="eeBarStartBtn" class="fsave" onclick="eeStartBarcode()">▶ Barcode scannen</button>'
+        +'<button type="button" id="eeBarStopBtn" class="fsave" style="background:#555;display:none;" onclick="eeStopBarcode()">■ Stoppen</button>'
+      +'</div>'
+      +'<button type="button" class="cb2" style="margin-top:8px;" onclick="saveEditEntry()">Speichern ✓</button>'
       +'<button type="button" class="del-btn" onclick="deleteEntry()">🗑️ Eintrag löschen</button>';
   } else {
     body.innerHTML='<label class="lbl">Menge</label>'
@@ -2218,6 +2255,7 @@ function closeOv(id){
   if(id==='searchOv'){addIngToEntry=false;stopBarcode();}
   if(id==='editRecOv'){erStopBarcode();}
   if(id==='photoOv'){pStopBarcode();}
+  if(id==='editOv'&&typeof eeStopBarcode==='function'){eeStopBarcode();}
 }
 function bgClose(e,id){if(e.target.id===id)closeOv(id);}
 // ═══ RECIPE EDITOR ═══
@@ -2731,6 +2769,146 @@ function deleteEditedRecipe(){
   recipes=recipes.filter(function(r){return r.id!==_editRecId;});
   saveX();renderOwnFoodList();closeOv('editRecOv');
   showToast('Rezept gelöscht');
+}
+
+
+// ═══ EDIT ENTRY - Add ingredient methods ═══
+var _eeBarcodeReader=null, _eeBarcodeActive=false;
+
+function eeShowMethod(method){
+  ['eeSearchPanel','eeChatPanel','eeFotoPanel','eeBarcodePanel'].forEach(function(id){
+    var el=document.getElementById(id);if(el)el.classList.add('hidden');
+  });
+  eeStopBarcode();
+  var el=document.getElementById('ee'+method.charAt(0).toUpperCase()+method.slice(1)+'Panel');
+  if(el)el.classList.remove('hidden');
+  if(method==='search'){eeDoSearch();setTimeout(function(){var i=document.getElementById('eeSearchInp');if(i)i.focus();},100);}
+  if(method==='chat'){setTimeout(function(){var i=document.getElementById('eeChatInp');if(i)i.focus();},100);}
+  if(method==='barcode')eeStartBarcode();
+}
+
+function eeAddIngredient(ing){
+  var e=getDay().meals[editM][editI];
+  if(!e||!e.ingredients)return;
+  e.ingredients.push(ing);
+  renderEditBody(e);
+  saveS();
+  showToast((ing.emoji||'🍽')+' '+ing.name+' hinzugefügt');
+}
+
+function eeDoSearch(){
+  var q=(document.getElementById('eeSearchInp')||{}).value||'';
+  var results=[],seen={};
+  customFoods.forEach(function(f){if(!seen[f.name.toLowerCase()]){seen[f.name.toLowerCase()]=true;results.push({name:f.name,emoji:f.emoji,per100:f.per100});}});
+  DB.forEach(function(f){var s=fuzzy(f,q);if((s>0||!q)&&!seen[f.n.toLowerCase()]){seen[f.n.toLowerCase()]=true;results.push({name:f.n,emoji:f.e,per100:{kcal:f.k,protein:f.p,carbs:f.c,fat:f.f},score:s});}});
+  if(q)results.sort(function(a,b){return(b.score||0)-(a.score||0);});
+  results=results.slice(0,12);
+  window._eeSearchRes=results;
+  var el=document.getElementById('eeSearchRes');if(!el)return;
+  if(!results.length){el.innerHTML='<div class="nr" style="padding:8px;">Kein Ergebnis</div>';return;}
+  el.innerHTML=results.map(function(p,i){
+    return'<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:1.5px solid var(--br);border-radius:10px;cursor:pointer;margin-bottom:5px;background:white;" onclick="eeAddFromSearch('+i+')">'
+      +'<div style="font-size:18px;">'+(p.emoji||'🍽')+'</div>'
+      +'<div style="flex:1;min-width:0;"><div style="font-weight:700;font-size:13px;">'+p.name+'</div>'
+      +'<div style="font-size:11px;color:var(--mu);">'+Math.round(p.per100.kcal)+' kcal pro 100g</div></div>'
+      +'<div style="font-size:18px;color:var(--g2);font-weight:900;">＋</div></div>';
+  }).join('');
+}
+
+function eeAddFromSearch(i){
+  var p=(window._eeSearchRes||[])[i];if(!p)return;
+  eeAddIngredient({name:p.name,emoji:p.emoji,amount:100,per100:p.per100});
+  var inp=document.getElementById('eeSearchInp');if(inp)inp.value='';
+  var res=document.getElementById('eeSearchRes');if(res)res.innerHTML='';
+}
+
+function eeSendChat(){
+  var inp=document.getElementById('eeChatInp');
+  var msg=(inp||{}).value||'';msg=msg.trim();if(!msg)return;
+  if(!isOnline){showToast('Internet benötigt');return;}
+  var btn=document.getElementById('eeChatBtn');
+  if(btn){btn.innerHTML='<span class="spin"></span>';btn.disabled=true;}
+  var prompt='Lebensmittel: '+msg+'\nNur JSON-Array, auf Deutsch:\n[{"name":"Deutscher Name","emoji":"Emoji","g":100}]\nNur Name und Gramm.';
+  callClaude('claude-haiku-4-5',[{type:'text',text:prompt}],150,
+    function(text){
+      var raw=parseIngJSON(text);
+      lookupNutrients(raw,function(resolved){
+        resolved.forEach(function(i){eeAddIngredient({name:i.name,emoji:i.emoji,amount:i.amount||100,per100:i.per100});});
+        if(inp)inp.value='';
+        if(btn){btn.innerHTML='➤';btn.disabled=false;}
+      });
+    },
+    function(err){showToast('Fehler: '+err);if(btn){btn.innerHTML='➤';btn.disabled=false;}}
+  );
+}
+
+function eeHandlePhoto(e){
+  var file=e.target.files[0];if(!file)return;
+  var reader=new FileReader();
+  reader.onload=function(ev){
+    var img=new Image();
+    img.onload=function(){
+      var c=document.createElement('canvas'),MAX=800,w=img.width,h=img.height;
+      if(w>h){if(w>MAX){h=Math.round(h*MAX/w);w=MAX;}}else{if(h>MAX){w=Math.round(w*MAX/h);h=MAX;}}
+      c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);
+      var b64=c.toDataURL('image/jpeg',0.7).split(',')[1];
+      var az=document.getElementById('eeAnalyzing');if(az)az.classList.remove('hidden');
+      if(!isOnline){showToast('Internet benötigt');if(az)az.classList.add('hidden');return;}
+      var prompt='Essensfoto analysieren. Alle sichtbaren Zutaten einzeln auf Deutsch. Nur JSON-Array:\n[{"name":"Deutscher Name","emoji":"Emoji","g":150}]\nNur Name und Gramm, realistisch schätzen. Max 6 Einträge.';
+      callClaude('claude-sonnet-4-5',[{type:'image',source:{type:'base64',media_type:'image/jpeg',data:b64}},{type:'text',text:prompt}],400,
+        function(text){
+          var raw=parseIngJSON(text);
+          if(!raw.length){showToast('Kein Lebensmittel erkannt');if(az)az.classList.add('hidden');return;}
+          lookupNutrients(raw,function(resolved){
+            resolved.forEach(function(i){eeAddIngredient({name:i.name,emoji:i.emoji,amount:i.amount||100,per100:i.per100});});
+            if(az)az.classList.add('hidden');
+          });
+        },
+        function(err){showToast('Fehler: '+err);if(az)az.classList.add('hidden');}
+      );
+    };
+    img.src=ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function eeStartBarcode(){
+  if(typeof ZXing==='undefined'){showToast('Scanner lädt...');return;}
+  var wrap=document.getElementById('eeBarcodeWrap');if(wrap)wrap.classList.remove('hidden');
+  var sb=document.getElementById('eeBarStartBtn');if(sb)sb.style.display='none';
+  var tb=document.getElementById('eeBarStopBtn');if(tb)tb.style.display='block';
+  _eeBarcodeActive=true;
+  var hints=new Map();
+  hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS,[ZXing.BarcodeFormat.EAN_13,ZXing.BarcodeFormat.EAN_8,ZXing.BarcodeFormat.UPC_A,ZXing.BarcodeFormat.UPC_E,ZXing.BarcodeFormat.CODE_128]);
+  _eeBarcodeReader=new ZXing.BrowserMultiFormatReader(hints);
+  _eeBarcodeReader.decodeFromVideoDevice(null,'eeBarcodeVideo',function(result,err){
+    if(!_eeBarcodeActive)return;
+    if(result){eeStopBarcode();eeLookupBarcode(result.getText());}
+  });
+}
+function eeStopBarcode(){
+  _eeBarcodeActive=false;
+  if(_eeBarcodeReader){try{_eeBarcodeReader.reset();}catch(e){}_eeBarcodeReader=null;}
+  var w=document.getElementById('eeBarcodeWrap');if(w)w.classList.add('hidden');
+  var s=document.getElementById('eeBarStartBtn');if(s)s.style.display='block';
+  var t=document.getElementById('eeBarStopBtn');if(t)t.style.display='none';
+}
+function eeLookupBarcode(code){
+  showToast('🔍 Suche...');
+  var cached=barcodeCache[code];
+  if(cached){eeAddIngredient({name:cached.name,emoji:cached.emoji,amount:100,per100:cached.per100});cacheFood(cached);return;}
+  if(!isOnline){showToast('Offline – Barcode nicht im Cache');return;}
+  fetch('https://world.openfoodfacts.org/api/v0/product/'+code+'.json')
+    .then(function(r){return r.json();})
+    .then(function(data){
+      if(data.status!==1||!data.product){showToast('Produkt nicht gefunden');return;}
+      var p=data.product,nm=p.nutriments||{};
+      var name=p.product_name_de||p.product_name||'Unbekannt';
+      var food={name:name,emoji:emo(name),barcode:code,per100:{kcal:nm['energy-kcal_100g']||0,protein:nm['proteins_100g']||0,carbs:nm['carbohydrates_100g']||0,fat:nm['fat_100g']||0}};
+      barcodeCache[code]=food;saveBarcodeCache();
+      eeAddIngredient({name:food.name,emoji:food.emoji,amount:100,per100:food.per100});
+      cacheFood(food);
+    }).catch(function(){showToast('Fehler beim Laden');});
 }
 
 function showToast(msg){var t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},2500);}
