@@ -698,8 +698,8 @@ var DB=[
   {n:'Griechischer Joghurt',e:'🥣',k:97,p:9,c:3.6,f:5,s:'joghurt greek'},{n:'Magerjoghurt',e:'🥣',k:36,p:3.4,c:4.4,f:0.2,s:'joghurt'},
   {n:'Magerquark',e:'🥄',k:67,p:12,c:3.3,f:0.5,s:'quark'},{n:'Speisequark',e:'🥄',k:95,p:12,c:3.4,f:2,s:'quark'},
   {n:'Frischkäse',e:'🧀',k:342,p:6,c:4.1,f:33,s:'cream cheese'},{n:'Hüttenkäse',e:'🧀',k:72,p:11,c:3.4,f:1.2,s:'cottage cheese'},
-  {n:'Gouda',e:'🧀',k:356,p:25,c:2.2,f:27,s:'käse cheese'},{n:'Mozzarella',e:'🧀',k:257,p:18,c:3.1,f:19,s:'käse'},
-  {n:'Feta',e:'🧀',k:264,p:14,c:4,f:21,s:'schafskäse'},{n:'Parmesan',e:'🧀',k:431,p:38,c:0,f:29,s:'käse'},
+  {n:'Gouda',e:'🧀',k:356,p:25,c:2.2,f:27,s:'gouda cheese'},{n:'Mozzarella',e:'🧀',k:257,p:18,c:3.1,f:19,s:''},
+  {n:'Feta',e:'🧀',k:264,p:14,c:4,f:21,s:'schafskase feta'},{n:'Parmesan',e:'🧀',k:431,p:38,c:0,f:29,s:''},
   {n:'Butter',e:'🧈',k:717,p:0.9,c:0.1,f:81,s:''},{n:'Margarine',e:'🧈',k:717,p:0.2,c:0.7,f:80,s:''},
   {n:'Sahne',e:'🥛',k:296,p:2.4,c:2.8,f:30,s:'schlagsahne cream'},{n:'Sauerrahm',e:'🥄',k:213,p:2.5,c:3.4,f:21,s:'sour cream'},
   {n:'Linsen (gekocht)',e:'🫘',k:116,p:9,c:20,f:0.4,s:'lentils'},{n:'Kichererbsen',e:'🫘',k:139,p:7.5,c:23,f:2.3,s:'chickpeas'},
@@ -726,6 +726,16 @@ var DB=[
   {n:'Rotwein',e:'🍷',k:85,p:0.1,c:2.6,f:0,s:'wein wine'},{n:'Schinken',e:'🍖',k:107,p:17,c:1,f:4,s:'ham'},
   {n:'Salami',e:'🍖',k:425,p:22,c:2,f:37,s:'wurst'},{n:'Speck',e:'🥓',k:541,p:37,c:1.4,f:42,s:'bacon'},
   {n:'Bratwurst',e:'🌭',k:312,p:13,c:2,f:28,s:'wurst'},
+  // ── Zusätzliche fehlende Lebensmittel ──
+  {n:'Skyr',e:'🥛',k:63,p:11,c:4,f:0.2,s:'skyr'},
+  {n:'Fleischsalat',e:'🥗',k:285,p:9,c:5,f:26,s:'fleisch salat wurstsalat'},
+  {n:'Käse',e:'🧀',k:356,p:25,c:2,f:27,s:'kaese cheese'},
+  {n:'Körnerbrötchen',e:'🥖',k:260,p:10,c:46,f:4,s:'koernerbroetchen kornbroetchen brötchen'},
+  {n:'Vollkornbrötchen',e:'🥖',k:250,p:9,c:44,f:3.5,s:'vollkorn brötchen'},
+  {n:'Mehrkornbrötchen',e:'🥖',k:258,p:10,c:45,f:4,s:'mehrkorn brötchen körner'},
+  {n:'Quark',e:'🥄',k:80,p:11,c:3.5,f:1.5,s:'quark'},
+  {n:'Wurst',e:'🌭',k:280,p:14,c:2,f:24,s:'aufschnitt wurstwaren'},
+  {n:'Aufschnitt',e:'🌭',k:200,p:15,c:1,f:15,s:'wurst aufschnitt'},
 ];
 var DE_EN={apfel:'apple',birne:'pear',banane:'banana',orange:'orange',erdbeere:'strawberry',blaubeere:'blueberry',himbeere:'raspberry',kirsche:'cherry',trauben:'grapes',kiwi:'kiwi',mango:'mango',avocado:'avocado',wassermelone:'watermelon',pfirsich:'peach',tomate:'tomato',gurke:'cucumber','möhre':'carrot',karotte:'carrot',brokkoli:'broccoli',spinat:'spinach',paprika:'bell pepper',zucchini:'zucchini',blumenkohl:'cauliflower',zwiebel:'onion',knoblauch:'garlic',pilze:'mushroom',kartoffel:'potato',mais:'corn',erbsen:'peas','hähnchen':'chicken','hühnerbrust':'chicken breast',putenbrust:'turkey',rinderhack:'ground beef',lachs:'salmon',thunfisch:'tuna',garnelen:'shrimp',ei:'egg',eier:'eggs',milch:'milk','käse':'cheese',joghurt:'yogurt',butter:'butter',brot:'bread',haferflocken:'oats','müsli':'muesli',reis:'rice',nudeln:'pasta',quinoa:'quinoa',mandeln:'almonds','walnüsse':'walnuts',linsen:'lentils',kichererbsen:'chickpeas',tofu:'tofu',schokolade:'chocolate',honig:'honey','olivenöl':'olive oil',kaffee:'coffee',tee:'tea'};
 
@@ -1836,16 +1846,16 @@ function lookupNutrients(rawItems, onDone){
     if(!isFinite(grams)||grams<=0)grams=null;
     var emoji=item.emoji||emo(name);
 
-    // 1. Check local DB first (zero cost)
+    // 1. Lokale DB (kein Datenverbrauch)
     var localMatch=findInLocalDB(name);
     if(localMatch){
-      if(grams===null){console.warn('[NutriTrack] Kein Grammwert fuer: '+name);}
+      if(grams===null)console.warn('[NutriTrack] Kein Grammwert fuer: '+name);
       results.push({name:localMatch.n,emoji:localMatch.e,amount:grams||0,per100:{kcal:localMatch.k,protein:localMatch.p,carbs:localMatch.c,fat:localMatch.f},missingGrams:grams===null});
       pending--;if(!pending)onDone(results);
       return;
     }
 
-    // 2. Try Open Food Facts if online
+    // 2. Open Food Facts (online, Markenprodukte)
     if(isOnline){
       var proxy='https://corsproxy.io/?';
       var url='https://world.openfoodfacts.org/cgi/search.pl?search_terms='+encodeURIComponent(name)+'&search_simple=1&action=process&json=1&page_size=5&fields=product_name,nutriments';
@@ -1859,33 +1869,86 @@ function lookupNutrients(rawItems, onDone){
           if(products.length>0){
             var p=products[0],nm=p.nutriments||{};
             results.push({name:name,emoji:emoji,amount:grams||0,per100:{kcal:nm['energy-kcal_100g']||0,protein:nm['proteins_100g']||0,carbs:nm['carbohydrates_100g']||0,fat:nm['fat_100g']||0},source:'off',missingGrams:grams===null});
+            pending--;if(!pending)onDone(results);
           } else {
-            // 3. Fallback: KI estimate for this single item
-            results.push(kiEstimate(name,emoji,grams));
+            // 3. KI-Nährwertabfrage als Fallback (genauer als hardcodierte Schätzwerte)
+            kiNutrientLookup(name,emoji,grams,function(res){
+              results.push(res);
+              pending--;if(!pending)onDone(results);
+            });
           }
-          pending--;if(!pending)onDone(results);
         })
         .catch(function(){
-          results.push(kiEstimate(name,emoji,grams));
-          pending--;if(!pending)onDone(results);
+          // OFF nicht erreichbar → direkt KI fragen
+          kiNutrientLookup(name,emoji,grams,function(res){
+            results.push(res);
+            pending--;if(!pending)onDone(results);
+          });
         });
     } else {
-      // Offline: use KI estimate from parseIngJSON fallback values
+      // Offline → KI nicht verfügbar, hardcodierte Schätzung
       results.push(kiEstimate(name,emoji,grams));
       pending--;if(!pending)onDone(results);
     }
   });
 }
 
+// KI-Nährwertabfrage für unbekannte Lebensmittel (~50 Tokens)
+function kiNutrientLookup(name, emoji, grams, onDone){
+  var prompt='Nährwerte pro 100g für "'+name+'" auf Deutsch.'+
+    'Antworte NUR mit JSON, kein Text davor/danach:'+
+    '{"kcal":100,"protein":5,"carbs":10,"fat":3}';
+  callClaude('claude-haiku-4-5',[{type:'text',text:prompt}],80,
+    function(text){
+      try{
+        var clean=text.replace(/`{3}json/gi,'').replace(/`{3}/g,'').trim();
+        var a=clean.indexOf('{'),z=clean.lastIndexOf('}');
+        if(a===-1||z<a)throw new Error('no json');
+        var d=JSON.parse(clean.slice(a,z+1));
+        var per100={
+          kcal:parseFloat(d.kcal)||0,
+          protein:parseFloat(d.protein)||0,
+          carbs:parseFloat(d.carbs)||0,
+          fat:parseFloat(d.fat)||0
+        };
+        console.log('[NutriTrack KI-Nährwert] '+name+':', per100);
+        onDone({name:name,emoji:emoji,amount:grams||0,per100:per100,source:'ki',missingGrams:grams===null});
+      }catch(e){
+        console.warn('[NutriTrack] KI-Nährwert Parse-Fehler für '+name, e);
+        onDone(kiEstimate(name,emoji,grams));
+      }
+    },
+    function(err){
+      console.warn('[NutriTrack] KI-Nährwert Fehler für '+name, err);
+      onDone(kiEstimate(name,emoji,grams));
+    }
+  );
+}
+
+
 function findInLocalDB(name){
-  var nl=name.toLowerCase();
-  // Try exact match first, then partial
+  var nl=name.toLowerCase().trim();
+  // 1. Exact match
   for(var i=0;i<DB.length;i++){
     if(DB[i].n.toLowerCase()===nl)return DB[i];
   }
+  // 2. Exact match on synonyms (whole word)
   for(var i=0;i<DB.length;i++){
-    var s=(DB[i].s||'').toLowerCase();
-    if(DB[i].n.toLowerCase().includes(nl)||nl.includes(DB[i].n.toLowerCase())||s.includes(nl))return DB[i];
+    var syns=(DB[i].s||'').toLowerCase().split(' ');
+    for(var j=0;j<syns.length;j++){if(syns[j]===nl)return DB[i];}
+  }
+  // 3. DB name starts with search term (e.g. "Hähnchen" matches "Hühnerbrust")
+  // Only if search term is at least 5 chars to avoid false positives
+  if(nl.length>=5){
+    for(var i=0;i<DB.length;i++){
+      if(DB[i].n.toLowerCase().startsWith(nl))return DB[i];
+    }
+  }
+  // 4. Search term starts with DB name (e.g. "Körnerbrötchen" matches "Brötchen")
+  // Only if DB name is at least 5 chars
+  for(var i=0;i<DB.length;i++){
+    var dn=DB[i].n.toLowerCase();
+    if(dn.length>=5&&nl.startsWith(dn))return DB[i];
   }
   return null;
 }
