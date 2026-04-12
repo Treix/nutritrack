@@ -1719,8 +1719,8 @@ function sendChat(){
   document.getElementById('chatRecArea').classList.add('hidden');
   msgs.scrollTop=msgs.scrollHeight;
   // Step 1: KI identifies food names + grams only
-  var prompt='Gegessen: '+msg+'\nAlle Zutaten einzeln auf Deutsch als JSON-Array:\n[{"name":"Deutscher Name","emoji":"Emoji","g":150}]\nNur Name und Gramm, realistisch schätzen. Max 8 Einträge.';
-  callClaude('claude-haiku-4-5',[{type:'text',text:prompt}],150,
+  var prompt='Der Nutzer hat folgendes gegessen: '+msg+'\nErstelle ein JSON-Array mit ALLEN genannten Lebensmitteln.\nRegeln:\n- Jeden genannten Begriff als eigene Zutat\n- Namen EXAKT wie eingegeben übernehmen, nicht umbenennen oder vereinfachen\n- Realistische Gramm-Schätzung pro Zutat\n- Format: [{"name":"Exakter Name","emoji":"Emoji","g":80}]\nKeine Lebensmittel weglassen oder zusammenfassen.';
+  callClaude('claude-haiku-4-5',[{type:'text',text:prompt}],300,
     function(text){
       try{
         var raw=parseIngJSON(text);
