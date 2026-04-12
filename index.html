@@ -878,13 +878,20 @@ function updateEditPortions(v){
   document.getElementById('ee_total').innerHTML='1 Portion: '+totalStr(t)+'<br>'+p+'× = '+totalStr({kcal:t.kcal*p,protein:t.protein*p,carbs:t.carbs*p,fat:t.fat*p});
 }
 function renderIngHTML(ings,pfx){
-  return ings.map(function(g,i){
+  return ings.map(function(ing,i){
+    var missingG=ing.missingGrams||(ing.amount===null||ing.amount===undefined||ing.amount==='');
+    var amtVal=missingG?'':(ing.amount||'');
+    var borderStyle=missingG?'border:1.5px solid var(--or);':'';
+    var warn=missingG?'<span style="font-size:11px;color:var(--or);">⚠️</span>':'';
+    var delClick='removeIng(\''+pfx+'\','+i+')';
+    var chgClick='updateIngAmt(\''+pfx+'\','+i+',this.value)';
     return'<div class="ing-item" id="'+pfx+'_i'+i+'">'
-      +'<div class="ing-e">'+(g.emoji||'🍽')+'</div>'
-      +'<div class="ing-n">'+g.name+'</div>'
-      +'<input type="number" class="ing-amt" value="'+g.amount+'" min="1" onchange="updateIngAmt(\''+pfx+'\','+i+',this.value)">'
+      +'<div class="ing-e">'+(ing.emoji||'🍽')+'</div>'
+      +'<div class="ing-n">'+ing.name+'</div>'
+      +'<input type="number" class="ing-amt" value="'+amtVal+'" min="1" placeholder="g?" style="'+borderStyle+'" onchange="'+chgClick+'">'
       +'<div class="ing-u">g</div>'
-      +'<button type="button" class="ing-del" onclick="removeIng(\''+pfx+'\','+i+')">✕</button>'
+      +warn
+      +'<button type="button" class="ing-del" onclick="'+delClick+'">✕</button>'
       +'</div>';
   }).join('');
 }
@@ -1497,33 +1504,42 @@ function doAnalyze(autoMode){
   var btn=document.getElementById('aBtn');
   btn.disabled=true;btn.innerHTML='<span style="display:inline-flex;gap:5px;align-items:center;"><span class="spin"></span>KI analysiert...</span>';
   if(autoMode)pSetStatus('Die KI analysiert jetzt das Foto ...',false);
-  var prompt='Identify all food and drinks visible in this photo. Reply ONLY with a valid JSON array, no other text:\n[{"name":"English food name","emoji":"emoji","g":150}]\nIf nothing edible is visible, return empty array: []. Max 8 items.';
-  callClaude('claude-sonnet-4-5',[{type:'image',source:{type:'base64',media_type:'image/jpeg',data:window._photoB64}},{type:'text',text:prompt}],400,
+
+  // Prompt: German names, recipe name separate, individual gram values, no duplicates
+  var prompt='Analysiere dieses Essensfoto auf Deutsch.\nGib ein JSON-Objekt zurueck:\n{"rezept":"Gesamtgerichtname auf Deutsch","zutaten":[{"name":"Zutat auf Deutsch","emoji":"Emoji","g":GRAMM}]}\nRegeln:\n- rezept: logischer Gesamtname des Gerichts (z.B. Cheeseburger mit Pommes)\n- zutaten: alle sichtbaren Einzelbestandteile (z.B. Burgerbroetchen, Patty, Kaese, Sauce, Pommes)\n- Kein Gesamtgericht als Zutat eintragen\n- Gramm: individuell und realistisch schaetzen, niemals pauschal 100g\n- Nur sichtbare Bestandteile, keine Halluzinationen\n- Alle Namen auf Deutsch\n- Wenn nichts erkennbar: {"rezept":"","zutaten":[]}';
+
+  callClaude('claude-sonnet-4-5',[{type:'image',source:{type:'base64',media_type:'image/jpeg',data:window._photoB64}},{type:'text',text:prompt}],600,
     function(text){
+      // Debug: log raw response to console for troubleshooting
+      console.log('[NutriTrack KI-Antwort]', text);
       try{
-        var raw=parseIngJSON(text);
-        if(!raw.length){
-          // KI returned text but no JSON - show what KI said
+        var parsed=parsePhotoResponse(text);
+        if(!parsed.zutaten.length){
           btn.disabled=false;btn.textContent='📷 Erneut analysieren';
-          var msg=text.length>0?'KI: '+text.slice(0,120):'Kein Lebensmittel erkannt. Besseres Foto versuchen.';
+          var msg=text.length>0?'KI: '+text.slice(0,150):'Kein Lebensmittel erkannt. Besseres Foto versuchen.';
           pSetStatus(msg,true);
           return;
         }
-        lookupNutrients(raw,function(resolved){
+        // Set recipe name if recognized and field is empty
+        if(parsed.rezept){
+          var nameField=document.getElementById('pRecName');
+          if(nameField&&!nameField.value.trim())nameField.value=parsed.rezept;
+        }
+        lookupNutrients(parsed.zutaten,function(resolved){
           resolved.forEach(function(item){pIng.push(item);});
           pUpdateIngList();
           btn.disabled=false;btn.textContent='📷 Erneut analysieren';
-          pSetStatus('Die KI hat '+resolved.length+' Zutat(en) erkannt.',false);
+          pSetStatus('KI hat '+resolved.length+' Zutat(en) erkannt'+(parsed.rezept?' ('+parsed.rezept+')':'')+'.',false);
         });
       }catch(e){
+        console.error('[NutriTrack Parse-Fehler]', e, text);
         btn.disabled=false;btn.textContent='📷 Erneut analysieren';
-        pSetStatus('Fehler: '+(e.message||'Unbekannt')+'. Erneut versuchen.',true);
+        pSetStatus('Parse-Fehler: '+e.message+'. Roh: '+text.slice(0,80),true);
       }
     },
-    function(err){showToast('Fehler: '+err);btn.disabled=false;btn.textContent='📷 Erneut analysieren';pSetStatus('Die KI-Fotoanalyse ist fehlgeschlagen.',true);}
+    function(err){showToast('Fehler: '+err);btn.disabled=false;btn.textContent='📷 Erneut analysieren';pSetStatus('KI-Anfrage fehlgeschlagen: '+err,true);}
   );
 }
-
 function pUpdateIngList(){
   var hasIng=pIng.length>0;
   document.getElementById('pIngArea').classList.toggle('hidden',!hasIng);
@@ -1745,6 +1761,41 @@ function addChatRecipe(){
 }
 
 // ═══════════ HELPERS ═══════════
+function parsePhotoResponse(text){
+  // Parse new format: {"rezept":"...","zutaten":[...]}
+  // Falls back to plain array for backwards compat
+  try{
+    var clean=text.replace(/`{3}json/gi,'').replace(/`{3}/g,'').trim();
+    // Try object format first
+    var oa=clean.indexOf('{'), oz=clean.lastIndexOf('}');
+    if(oa!==-1&&oz>oa){
+      var obj=JSON.parse(clean.slice(oa,oz+1));
+      if(obj.zutaten&&Array.isArray(obj.zutaten)){
+        return{
+          rezept:(obj.rezept||'').trim(),
+          zutaten:obj.zutaten.filter(function(f){return f&&f.name;}).map(function(f){
+            var g=parseFloat(f.g);
+            // No silent 100g default - use null if missing/invalid
+            return{name:f.name,emoji:f.emoji||emo(f.name||''),g:isFinite(g)&&g>0?g:null};
+          })
+        };
+      }
+    }
+    // Fallback: plain array
+    var aa=clean.indexOf('['),az=clean.lastIndexOf(']');
+    if(aa!==-1&&az>aa){
+      var arr=JSON.parse(clean.slice(aa,az+1));
+      if(Array.isArray(arr)){
+        return{rezept:'',zutaten:arr.filter(function(f){return f&&f.name;}).map(function(f){
+          var g=parseFloat(f.g);
+          return{name:f.name,emoji:f.emoji||emo(f.name||''),g:isFinite(g)&&g>0?g:null};
+        })};
+      }
+    }
+  }catch(e){console.error('[NutriTrack parsePhotoResponse]',e);}
+  return{rezept:'',zutaten:[]};
+}
+
 function parseIngJSON(text){
   try{
     var clean=text.replace(/`{3}json/gi,'').replace(/`{3}/g,'').trim();
@@ -1764,7 +1815,8 @@ function parseIngJSON(text){
     if(!Array.isArray(foods))return[];
     return foods.filter(function(f){return f&&f.name;}).map(function(f){
       var p=f.p100||f.per100||{};
-      return{name:f.name||'?',emoji:f.emoji||emo(f.name||''),amount:f.g||f.estimatedGrams||100,per100:{kcal:p.k||p.kcal||0,protein:p.p||p.protein||0,carbs:p.c||p.carbs||0,fat:p.f||p.fat||0}};
+      var g=parseFloat(f.g||f.estimatedGrams);var amt=isFinite(g)&&g>0?g:null;
+      return{name:f.name||'?',emoji:f.emoji||emo(f.name||''),amount:amt,per100:{kcal:p.k||p.kcal||0,protein:p.p||p.protein||0,carbs:p.c||p.carbs||0,fat:p.f||p.fat||0}};
     });
   }catch(e){return[];}
 }
@@ -1776,13 +1828,16 @@ function lookupNutrients(rawItems, onDone){
 
   rawItems.forEach(function(item){
     var name=item.name||'';
-    var grams=item.g||item.estimatedGrams||100;
+    var grams=item.g||item.amount||item.estimatedGrams||null;
+    if(grams!==null)grams=parseFloat(grams);
+    if(!isFinite(grams)||grams<=0)grams=null;
     var emoji=item.emoji||emo(name);
 
     // 1. Check local DB first (zero cost)
     var localMatch=findInLocalDB(name);
     if(localMatch){
-      results.push({name:localMatch.n,emoji:localMatch.e,amount:grams,per100:{kcal:localMatch.k,protein:localMatch.p,carbs:localMatch.c,fat:localMatch.f}});
+      if(grams===null){console.warn('[NutriTrack] Kein Grammwert fuer: '+name);}
+      results.push({name:localMatch.n,emoji:localMatch.e,amount:grams||0,per100:{kcal:localMatch.k,protein:localMatch.p,carbs:localMatch.c,fat:localMatch.f},missingGrams:grams===null});
       pending--;if(!pending)onDone(results);
       return;
     }
@@ -1800,7 +1855,7 @@ function lookupNutrients(rawItems, onDone){
           });
           if(products.length>0){
             var p=products[0],nm=p.nutriments||{};
-            results.push({name:name,emoji:emoji,amount:grams,per100:{kcal:nm['energy-kcal_100g']||0,protein:nm['proteins_100g']||0,carbs:nm['carbohydrates_100g']||0,fat:nm['fat_100g']||0},source:'off'});
+            results.push({name:name,emoji:emoji,amount:grams||0,per100:{kcal:nm['energy-kcal_100g']||0,protein:nm['proteins_100g']||0,carbs:nm['carbohydrates_100g']||0,fat:nm['fat_100g']||0},source:'off',missingGrams:grams===null});
           } else {
             // 3. Fallback: KI estimate for this single item
             results.push(kiEstimate(name,emoji,grams));
@@ -1849,7 +1904,7 @@ function kiEstimate(name,emoji,grams){
   else if(/milk|milch|yogurt|joghurt/.test(nl)) per100={kcal:60,protein:3.5,carbs:5,fat:3};
   else if(/oil|öl|butter/.test(nl)) per100={kcal:750,protein:0,carbs:0,fat:83};
   else if(/sauce|soße/.test(nl)) per100={kcal:80,protein:2,carbs:10,fat:3};
-  return{name:name,emoji:emoji,amount:grams,per100:per100,source:'estimate'};
+  return{name:name,emoji:emoji,amount:grams||0,per100:per100,source:'estimate',missingGrams:!grams};
 }
 
 // ═══ BARCODE SCANNER ═══
