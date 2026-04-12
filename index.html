@@ -1497,19 +1497,28 @@ function doAnalyze(autoMode){
   var btn=document.getElementById('aBtn');
   btn.disabled=true;btn.innerHTML='<span style="display:inline-flex;gap:5px;align-items:center;"><span class="spin"></span>KI analysiert...</span>';
   if(autoMode)pSetStatus('Die KI analysiert jetzt das Foto ...',false);
-  var prompt='Photo of food. List all visible ingredients. Reply ONLY JSON array:\n[{"name":"English food name","emoji":"emoji","g":150}]\nOnly name and grams, no nutrition. Max 8 items.';
+  var prompt='Identify all food and drinks visible in this photo. Reply ONLY with a valid JSON array, no other text:\n[{"name":"English food name","emoji":"emoji","g":150}]\nIf nothing edible is visible, return empty array: []. Max 8 items.';
   callClaude('claude-sonnet-4-5',[{type:'image',source:{type:'base64',media_type:'image/jpeg',data:window._photoB64}},{type:'text',text:prompt}],400,
     function(text){
       try{
         var raw=parseIngJSON(text);
-        if(!raw.length)throw new Error('empty');
+        if(!raw.length){
+          // KI returned text but no JSON - show what KI said
+          btn.disabled=false;btn.textContent='📷 Erneut analysieren';
+          var msg=text.length>0?'KI: '+text.slice(0,120):'Kein Lebensmittel erkannt. Besseres Foto versuchen.';
+          pSetStatus(msg,true);
+          return;
+        }
         lookupNutrients(raw,function(resolved){
           resolved.forEach(function(item){pIng.push(item);});
           pUpdateIngList();
           btn.disabled=false;btn.textContent='📷 Erneut analysieren';
-          pSetStatus('Die KI hat Zutaten erkannt. Bitte prüfen und bei Bedarf anpassen.',false);
+          pSetStatus('Die KI hat '+resolved.length+' Zutat(en) erkannt.',false);
         });
-      }catch(e){showToast('Fehler beim Parsen');btn.disabled=false;btn.textContent='📷 Erneut analysieren';pSetStatus('Die KI-Antwort konnte nicht verarbeitet werden.',true);}
+      }catch(e){
+        btn.disabled=false;btn.textContent='📷 Erneut analysieren';
+        pSetStatus('Fehler: '+(e.message||'Unbekannt')+'. Erneut versuchen.',true);
+      }
     },
     function(err){showToast('Fehler: '+err);btn.disabled=false;btn.textContent='📷 Erneut analysieren';pSetStatus('Die KI-Fotoanalyse ist fehlgeschlagen.',true);}
   );
@@ -1738,20 +1747,24 @@ function addChatRecipe(){
 // ═══════════ HELPERS ═══════════
 function parseIngJSON(text){
   try{
-    // Strip markdown code fences if present
+    // Strip markdown code fences
     var clean=text.replace(/```json/gi,'').replace(/```/g,'').trim();
-    // Try to find JSON array
+    // Find JSON array (greedy - gets the outermost [...])
     var match=clean.match(/\[\s\S]*\]/);
     if(!match){
-      // Try to find partial array and close it
+      // Try to repair truncated JSON
       var partial=clean.match(/\[\s\S]*/);
       if(partial){
         var s=partial[0];
-        // Count unclosed brackets
-        var depth=0;
-        for(var i=0;i<s.length;i++){if(s[i]==='[')depth++;else if(s[i]===']')depth--;}
-        if(depth>0)s=s+']'.repeat(depth);
-        try{match=[s];}catch(e2){}
+        // Remove last incomplete object (ends without })
+        // Find last complete object by looking for last '}' before truncation
+        var lastClose=s.lastIndexOf('}');
+        if(lastClose>0){
+          s=s.slice(0,lastClose+1)+']';
+        } else {
+          s='[]';
+        }
+        try{JSON.parse(s);match=[s];}catch(e2){match=['[]'];}
       }
     }
     if(!match)return[];
