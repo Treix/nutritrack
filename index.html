@@ -1747,28 +1747,20 @@ function addChatRecipe(){
 // ═══════════ HELPERS ═══════════
 function parseIngJSON(text){
   try{
-    // Strip markdown code fences
-    var clean=text.replace(/```json/gi,'').replace(/```/g,'').trim();
-    // Find JSON array (greedy - gets the outermost [...])
-    var match=clean.match(/\[\s\S]*\]/);
-    if(!match){
-      // Try to repair truncated JSON
-      var partial=clean.match(/\[\s\S]*/);
-      if(partial){
-        var s=partial[0];
-        // Remove last incomplete object (ends without })
-        // Find last complete object by looking for last '}' before truncation
-        var lastClose=s.lastIndexOf('}');
-        if(lastClose>0){
-          s=s.slice(0,lastClose+1)+']';
-        } else {
-          s='[]';
-        }
-        try{JSON.parse(s);match=[s];}catch(e2){match=['[]'];}
-      }
+    var clean=text.replace(/`{3}json/gi,'').replace(/`{3}/g,'').trim();
+    // Extract JSON array - use indexOf for reliability
+    var a=clean.indexOf('['),z=clean.lastIndexOf(']');
+    if(a===-1||z===-1||z<a){
+      // Try to repair truncated: find last complete object
+      if(a!==-1){
+        var lastBrace=clean.lastIndexOf('}');
+        if(lastBrace>a){clean=clean.slice(a,lastBrace+1)+']';}
+        else{return[];}
+        a=0;z=clean.length-1;
+      } else {return[];}
     }
-    if(!match)return[];
-    var foods=JSON.parse(match[0]);
+    var arr=clean.slice(a,z+1);
+    var foods=JSON.parse(arr);
     if(!Array.isArray(foods))return[];
     return foods.filter(function(f){return f&&f.name;}).map(function(f){
       var p=f.p100||f.per100||{};
