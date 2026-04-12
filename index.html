@@ -565,7 +565,10 @@ button,input,select,textarea{font-family:'Nunito Sans',sans-serif;cursor:pointer
     <div class="mhan"></div>
     <div class="mhd"><button type="button" class="mcl" onclick="closeOv('editRecOv')">✕</button><div class="mti" id="editRecTitle">Rezept bearbeiten</div></div>
     <div class="mbd">
-      <input type="text" class="finp" id="editRecName" placeholder="Rezeptname" style="margin-bottom:10px;">
+      <label class="lbl">Rezeptname</label>
+      <input type="text" class="finp" id="editRecName" placeholder="Rezeptname" style="margin-bottom:8px;">
+      <label class="lbl">Emoji</label>
+      <input type="text" class="finp" id="editRecEmoji" placeholder="z.B. 🍝" style="margin-bottom:10px;">
       <label class="lbl">Zutaten</label>
       <div id="editRecIngList" class="ing-list" style="margin-bottom:8px;"></div>
       <div id="editRecTotal" class="rec-total" style="margin-bottom:10px;"></div>
@@ -1495,11 +1498,11 @@ function doAnalyze(autoMode){
   btn.disabled=true;btn.innerHTML='<span style="display:inline-flex;gap:5px;align-items:center;"><span class="spin"></span>KI analysiert...</span>';
   if(autoMode)pSetStatus('Die KI analysiert jetzt das Foto ...',false);
   var prompt='Photo of food. List all visible ingredients. Reply ONLY JSON array:\n[{"name":"English food name","emoji":"emoji","g":150}]\nOnly name and grams, no nutrition. Max 8 items.';
-  callClaude('claude-sonnet-4-5',[{type:'image',source:{type:'base64',media_type:'image/jpeg',data:window._photoB64}},{type:'text',text:prompt}],200,
+  callClaude('claude-sonnet-4-5',[{type:'image',source:{type:'base64',media_type:'image/jpeg',data:window._photoB64}},{type:'text',text:prompt}],400,
     function(text){
       try{
-        var match=text.match(/\[[\s\S]*\]/);if(!match)throw new Error();
-        var raw=JSON.parse(match[0]);
+        var raw=parseIngJSON(text);
+        if(!raw.length)throw new Error('empty');
         lookupNutrients(raw,function(resolved){
           resolved.forEach(function(item){pIng.push(item);});
           pUpdateIngList();
@@ -1601,8 +1604,8 @@ function pSendChat(){
   callClaude('claude-haiku-4-5',[{type:'text',text:prompt}],100,
     function(text){
       try{
-        var match=text.match(/\[[\s\S]*\]/);if(!match)throw new Error();
-        var raw=JSON.parse(match[0]);
+        var raw=parseIngJSON(text);
+        if(!raw.length)throw new Error('empty');
         lookupNutrients(raw,function(resolved){
           resolved.forEach(function(i){pIng.push(i);});
           pUpdateIngList();
@@ -1692,9 +1695,8 @@ function sendChat(){
   callClaude('claude-haiku-4-5',[{type:'text',text:prompt}],150,
     function(text){
       try{
-        var match=text.match(/\[[\s\S]*\]/);
-        if(!match)throw new Error('no json');
-        var raw=JSON.parse(match[0]);
+        var raw=parseIngJSON(text);
+        if(!raw.length)throw new Error('empty');
         msgs.innerHTML+='<div class="cm a">✨ Suche Nährwerte für '+raw.length+' Zutaten...</div>';
         msgs.scrollTop=msgs.scrollHeight;
         // Step 2: look up nutrients in OFF
@@ -1736,9 +1738,26 @@ function addChatRecipe(){
 // ═══════════ HELPERS ═══════════
 function parseIngJSON(text){
   try{
-    var match=text.match(/\[[\s\S]*\]/);if(!match)return[];
+    // Strip markdown code fences if present
+    var clean=text.replace(/```json/gi,'').replace(/```/g,'').trim();
+    // Try to find JSON array
+    var match=clean.match(/\[\s\S]*\]/);
+    if(!match){
+      // Try to find partial array and close it
+      var partial=clean.match(/\[\s\S]*/);
+      if(partial){
+        var s=partial[0];
+        // Count unclosed brackets
+        var depth=0;
+        for(var i=0;i<s.length;i++){if(s[i]==='[')depth++;else if(s[i]===']')depth--;}
+        if(depth>0)s=s+']'.repeat(depth);
+        try{match=[s];}catch(e2){}
+      }
+    }
+    if(!match)return[];
     var foods=JSON.parse(match[0]);
-    return foods.map(function(f){
+    if(!Array.isArray(foods))return[];
+    return foods.filter(function(f){return f&&f.name;}).map(function(f){
       var p=f.p100||f.per100||{};
       return{name:f.name||'?',emoji:f.emoji||emo(f.name||''),amount:f.g||f.estimatedGrams||100,per100:{kcal:p.k||p.kcal||0,protein:p.p||p.protein||0,carbs:p.c||p.carbs||0,fat:p.f||p.fat||0}};
     });
@@ -2084,6 +2103,7 @@ function openEditRecipe(id){
   _editRecId=id;
   document.getElementById('editRecTitle').textContent=(rec.emoji||'📋')+' '+rec.name;
   document.getElementById('editRecName').value=rec.name;
+  document.getElementById('editRecEmoji').value=rec.emoji||'';
   renderEditRecIng(rec.ingredients);
   // Hide all sub-panels
   ['erSearchPanel','erChatPanel','erFotoPanel','erBarcodePanel'].forEach(function(i){document.getElementById(i).classList.add('hidden');});
@@ -2148,8 +2168,8 @@ function erSendChat(){
   callClaude('claude-haiku-4-5',[{type:'text',text:prompt}],100,
     function(text){
       try{
-        var match=text.match(/\[[\s\S]*\]/);if(!match)throw new Error();
-        var raw=JSON.parse(match[0]);
+        var raw=parseIngJSON(text);
+        if(!raw.length)throw new Error('empty');
         lookupNutrients(raw,function(resolved){
           resolved.forEach(function(i){erAddIngredient({name:i.name,emoji:i.emoji,amount:i.amount,per100:i.per100});});
           document.getElementById('erChatInp').value='';
@@ -2177,9 +2197,9 @@ function erHandlePhoto(e){
       callClaude('claude-sonnet-4-5',[{type:'image',source:{type:'base64',media_type:'image/jpeg',data:b64}},{type:'text',text:prompt}],200,
         function(text){
           try{
-            var match=text.match(/\[[\s\S]*\]/);if(!match)throw new Error();
-            var raw=JSON.parse(match[0]);
-            lookupNutrients(raw,function(resolved){
+            var raw=parseIngJSON(text);
+        if(!raw.length)throw new Error('empty');
+        lookupNutrients(raw,function(resolved){
               resolved.forEach(function(i){erAddIngredient({name:i.name,emoji:i.emoji,amount:i.amount,per100:i.per100});});
               document.getElementById('erAnalyzing').classList.add('hidden');
             });
@@ -2244,7 +2264,9 @@ function saveEditedRecipe(){
   var rec=recipes.find(function(r){return r.id===_editRecId;});
   if(!rec)return;
   var newName=document.getElementById('editRecName').value.trim();
+  var newEmoji=document.getElementById('editRecEmoji').value.trim();
   if(newName)rec.name=newName;
+  if(newEmoji)rec.emoji=newEmoji;
   saveX();renderOwnFoodList();closeOv('editRecOv');
   showToast('Rezept gespeichert ✓');
 }
@@ -2334,8 +2356,8 @@ function pSendChat(){
   callClaude('claude-haiku-4-5',[{type:'text',text:prompt}],100,
     function(text){
       try{
-        var match=text.match(/\[[\s\S]*\]/);if(!match)throw new Error();
-        var raw=JSON.parse(match[0]);
+        var raw=parseIngJSON(text);
+        if(!raw.length)throw new Error('empty');
         lookupNutrients(raw,function(resolved){
           resolved.forEach(function(i){pIng.push(i);});
           pUpdateIngList();
@@ -2411,6 +2433,7 @@ function openEditRecipe(id){
   _editRecId=id;
   document.getElementById('editRecTitle').textContent=(rec.emoji||'📋')+' '+rec.name;
   document.getElementById('editRecName').value=rec.name;
+  document.getElementById('editRecEmoji').value=rec.emoji||'';
   renderEditRecIng(rec.ingredients);
   // Hide all sub-panels
   ['erSearchPanel','erChatPanel','erFotoPanel','erBarcodePanel'].forEach(function(i){document.getElementById(i).classList.add('hidden');});
@@ -2475,8 +2498,8 @@ function erSendChat(){
   callClaude('claude-haiku-4-5',[{type:'text',text:prompt}],100,
     function(text){
       try{
-        var match=text.match(/\[[\s\S]*\]/);if(!match)throw new Error();
-        var raw=JSON.parse(match[0]);
+        var raw=parseIngJSON(text);
+        if(!raw.length)throw new Error('empty');
         lookupNutrients(raw,function(resolved){
           resolved.forEach(function(i){erAddIngredient({name:i.name,emoji:i.emoji,amount:i.amount,per100:i.per100});});
           document.getElementById('erChatInp').value='';
@@ -2504,9 +2527,9 @@ function erHandlePhoto(e){
       callClaude('claude-sonnet-4-5',[{type:'image',source:{type:'base64',media_type:'image/jpeg',data:b64}},{type:'text',text:prompt}],200,
         function(text){
           try{
-            var match=text.match(/\[[\s\S]*\]/);if(!match)throw new Error();
-            var raw=JSON.parse(match[0]);
-            lookupNutrients(raw,function(resolved){
+            var raw=parseIngJSON(text);
+        if(!raw.length)throw new Error('empty');
+        lookupNutrients(raw,function(resolved){
               resolved.forEach(function(i){erAddIngredient({name:i.name,emoji:i.emoji,amount:i.amount,per100:i.per100});});
               document.getElementById('erAnalyzing').classList.add('hidden');
             });
@@ -2571,7 +2594,9 @@ function saveEditedRecipe(){
   var rec=recipes.find(function(r){return r.id===_editRecId;});
   if(!rec)return;
   var newName=document.getElementById('editRecName').value.trim();
+  var newEmoji=document.getElementById('editRecEmoji').value.trim();
   if(newName)rec.name=newName;
+  if(newEmoji)rec.emoji=newEmoji;
   saveX();renderOwnFoodList();closeOv('editRecOv');
   showToast('Rezept gespeichert ✓');
 }
