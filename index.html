@@ -1353,38 +1353,73 @@ function pickerStartScan(){
   document.getElementById('pickerBcStopBtn').style.display='block';
   document.getElementById('pickerBarcodeResult').innerHTML='<div style="font-size:12px;color:var(--mu);padding:6px;">📷 Kamera wird gestartet...</div>';
   pickerBcActive=true;
-  pickerBcReader=new ZXing.BrowserMultiFormatReader();
-  // Find back camera explicitly
-  pickerBcReader.listVideoInputDevices().then(function(devices){
-    if(!pickerBcActive)return;
-    // Prefer back camera (environment)
-    var deviceId=null;
-    if(devices&&devices.length>0){
-      var back=devices.find(function(d){return /back|rear|environment|hinten/i.test(d.label);});
-      deviceId=back?back.deviceId:devices[devices.length>1?devices.length-1:0].deviceId;
-    }
+  // Hints: focus on EAN/UPC/Code128 for speed
+  var hints=new Map();
+  hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS,[
+    ZXing.BarcodeFormat.EAN_13,
+    ZXing.BarcodeFormat.EAN_8,
+    ZXing.BarcodeFormat.UPC_A,
+    ZXing.BarcodeFormat.UPC_E,
+    ZXing.BarcodeFormat.CODE_128,
+    ZXing.BarcodeFormat.CODE_39
+  ]);
+  hints.set(ZXing.DecodeHintType.TRY_HARDER,true);
+  // 150ms between scans (default 500ms is too slow)
+  pickerBcReader=new ZXing.BrowserMultiFormatReader(hints,150);
+  // Request back camera directly via getUserMedia constraints
+  var videoEl=document.getElementById('pickerBarcodeVideo');
+  navigator.mediaDevices.getUserMedia({
+    video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}}
+  }).then(function(stream){
+    if(!pickerBcActive){stream.getTracks().forEach(function(t){t.stop();});return;}
+    videoEl.srcObject=stream;
+    videoEl.setAttribute('playsinline','');
+    videoEl.play();
     document.getElementById('pickerBarcodeResult').innerHTML='';
-    pickerBcReader.decodeFromVideoDevice(deviceId,'pickerBarcodeVideo',function(result,err){
+    // Decode continuously from the video element
+    pickerBcReader.decodeFromVideoElement(videoEl).then(function(result){
       if(!pickerBcActive)return;
-      if(result){
-        pickerStopScan();
-        pickerLookupBarcode(result.getText());
-      }
-      // err is normal between frames - only log real errors
-      if(err&&!(err instanceof ZXing.NotFoundException)){
-        console.warn('[NutriTrack Barcode]',err);
-      }
+      pickerStopScan();
+      pickerLookupBarcode(result.getText());
+    }).catch(function(err){
+      if(!pickerBcActive)return;
+      if(err&&err.name!=='NotFoundException')
+        console.warn('[NutriTrack Barcode decode]',err);
     });
+    // Poll manually since decodeFromVideoElement is one-shot in some versions
+    pickerBcReader._scanLoop=setInterval(function(){
+      if(!pickerBcActive){clearInterval(pickerBcReader._scanLoop);return;}
+      try{
+        var result=pickerBcReader.decodeFromVideoElementOnce(videoEl);
+        if(result){clearInterval(pickerBcReader._scanLoop);pickerStopScan();pickerLookupBarcode(result.getText());}
+      }catch(e){
+        if(e&&e.name!=='NotFoundException'&&!(e instanceof ZXing.NotFoundException))
+          console.warn('[NutriTrack scan]',e.name);
+      }
+    },150);
   }).catch(function(err){
-    console.error('[NutriTrack Barcode Camera]',err);
-    document.getElementById('pickerBarcodeResult').innerHTML='<div style="font-size:13px;color:var(--re);padding:8px;">❌ Kamerazugriff verweigert.<br>Bitte Kameraerlaubnis in den Browser-Einstellungen erlauben.</div>';
+    console.error('[NutriTrack Camera]',err);
+    var msg=err.name==='NotAllowedError'
+      ?'❌ Kamerazugriff verweigert. Bitte in Browser-Einstellungen erlauben.'
+      :'❌ Kamera nicht verfügbar: '+err.message;
+    document.getElementById('pickerBarcodeResult').innerHTML='<div style="font-size:13px;color:var(--re);padding:8px;">'+msg+'</div>';
     pickerStopScan();
   });
 }
 
 function pickerStopScan(){
   pickerBcActive=false;
-  if(pickerBcReader){try{pickerBcReader.reset();}catch(e){}pickerBcReader=null;}
+  if(pickerBcReader){
+    try{if(pickerBcReader._scanLoop)clearInterval(pickerBcReader._scanLoop);}catch(e){}
+    try{pickerBcReader.reset();}catch(e){}
+    pickerBcReader=null;
+  }
+  // Stop camera stream
+  var videoEl=document.getElementById('pickerBarcodeVideo');
+  if(videoEl&&videoEl.srcObject){
+    try{videoEl.srcObject.getTracks().forEach(function(t){t.stop();});}catch(e){}
+    videoEl.srcObject=null;
+  }
   var w=document.getElementById('pickerBarcodeWrap');if(w)w.classList.add('hidden');
   var s=document.getElementById('pickerBcStartBtn');if(s)s.style.display='block';
   var t=document.getElementById('pickerBcStopBtn');if(t)t.style.display='none';
