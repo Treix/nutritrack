@@ -328,7 +328,7 @@ button,input,select,textarea{font-family:'Nunito Sans',sans-serif;cursor:pointer
   </div>
   <div class="bnav">
     <button type="button" class="ni on" id="nM" onclick="switchTab('main')"><span>🏠</span>Heute</button>
-    <div class="cw"><button type="button" class="cb" onclick="openPicker(null,'foto')">📷</button></div>
+    <div class="cw"><button type="button" class="cb" onclick="openPicker(null,'search')">＋</button></div>
     <button type="button" class="ni" id="nS" onclick="switchTab('stats')"><span>📊</span>Statistik</button>
   </div>
 </div>
@@ -347,7 +347,7 @@ button,input,select,textarea{font-family:'Nunito Sans',sans-serif;cursor:pointer
   </div>
   <div class="bnav">
     <button type="button" class="ni" id="nM2" onclick="switchTab('main')"><span>🏠</span>Heute</button>
-    <div class="cw"><button type="button" class="cb" onclick="openPicker(null,'foto')">📷</button></div>
+    <div class="cw"><button type="button" class="cb" onclick="openPicker(null,'search')">＋</button></div>
     <button type="button" class="ni on" id="nS2" onclick="switchTab('stats')"><span>📊</span>Statistik</button>
   </div>
 </div>
@@ -1019,6 +1019,8 @@ function closePicker(){
 }
 
 function pickerSetTab(tab){
+  // Always stop barcode scan when switching tabs
+  pickerStopScan();
   document.querySelectorAll('.picker-tab').forEach(function(b){b.classList.remove('act');});
   document.querySelectorAll('.picker-panel').forEach(function(p){p.classList.remove('act');});
   var tabEl=document.getElementById('ptab-'+tab);
@@ -1026,9 +1028,8 @@ function pickerSetTab(tab){
   if(tabEl)tabEl.classList.add('act');
   if(panelEl)panelEl.classList.add('act');
   if(tab==='search'){pickerLoadDefaultResults();}
-  if(tab==='barcode'){pickerStartScan();}
-  if(tab!=='barcode'){pickerStopScan();}
-  if(tab==='chat')setTimeout(function(){var inp=document.getElementById('pickerChatInp');if(inp)inp.focus();},100);
+  if(tab==='barcode'){setTimeout(function(){pickerStartScan();},150);}
+  if(tab==='chat'){setTimeout(function(){var inp=document.getElementById('pickerChatInp');if(inp)inp.focus();},100);}
 }
 
 function pickerLoadDefaultResults(){
@@ -1350,13 +1351,34 @@ function pickerStartScan(){
   wrap.classList.remove('hidden');
   document.getElementById('pickerBcStartBtn').style.display='none';
   document.getElementById('pickerBcStopBtn').style.display='block';
+  document.getElementById('pickerBarcodeResult').innerHTML='<div style="font-size:12px;color:var(--mu);padding:6px;">📷 Kamera wird gestartet...</div>';
   pickerBcActive=true;
-  var hints=new Map();
-  hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS,[ZXing.BarcodeFormat.EAN_13,ZXing.BarcodeFormat.EAN_8,ZXing.BarcodeFormat.UPC_A,ZXing.BarcodeFormat.UPC_E,ZXing.BarcodeFormat.CODE_128]);
-  pickerBcReader=new ZXing.BrowserMultiFormatReader(hints);
-  pickerBcReader.decodeFromVideoDevice(null,'pickerBarcodeVideo',function(result,err){
+  pickerBcReader=new ZXing.BrowserMultiFormatReader();
+  // Find back camera explicitly
+  pickerBcReader.listVideoInputDevices().then(function(devices){
     if(!pickerBcActive)return;
-    if(result){pickerStopScan();pickerLookupBarcode(result.getText());}
+    // Prefer back camera (environment)
+    var deviceId=null;
+    if(devices&&devices.length>0){
+      var back=devices.find(function(d){return /back|rear|environment|hinten/i.test(d.label);});
+      deviceId=back?back.deviceId:devices[devices.length>1?devices.length-1:0].deviceId;
+    }
+    document.getElementById('pickerBarcodeResult').innerHTML='';
+    pickerBcReader.decodeFromVideoDevice(deviceId,'pickerBarcodeVideo',function(result,err){
+      if(!pickerBcActive)return;
+      if(result){
+        pickerStopScan();
+        pickerLookupBarcode(result.getText());
+      }
+      // err is normal between frames - only log real errors
+      if(err&&!(err instanceof ZXing.NotFoundException)){
+        console.warn('[NutriTrack Barcode]',err);
+      }
+    });
+  }).catch(function(err){
+    console.error('[NutriTrack Barcode Camera]',err);
+    document.getElementById('pickerBarcodeResult').innerHTML='<div style="font-size:13px;color:var(--re);padding:8px;">❌ Kamerazugriff verweigert.<br>Bitte Kameraerlaubnis in den Browser-Einstellungen erlauben.</div>';
+    pickerStopScan();
   });
 }
 
