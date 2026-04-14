@@ -464,6 +464,7 @@ button,input,select,textarea{font-family:'Nunito Sans',sans-serif;cursor:pointer
           <div class="barcode-overlay"><div style="width:70%;height:50%;border:2px solid var(--g2);border-radius:8px;position:relative;"><div class="barcode-line"></div></div></div>
           <div class="barcode-hint">Barcode in den Rahmen halten</div>
         </div>
+        <button type="button" id="torchBtn" onclick="pickerToggleTorch()" style="display:none;width:100%;background:rgba(0,0,0,.08);border:1.5px solid var(--br);border-radius:10px;padding:10px;font-size:15px;margin-bottom:8px;font-weight:600;">🔦 Taschenlampe ein/aus</button>
         <div id="pickerBarcodeResult"></div>
         <button type="button" id="pickerBcStartBtn" class="abt" onclick="pickerStartScan()">▶ Scanner starten</button>
         <button type="button" id="pickerBcStopBtn" class="abt" style="display:none;background:linear-gradient(135deg,#555,#777);" onclick="pickerStopScan()">■ Scanner stoppen</button>
@@ -1360,6 +1361,27 @@ function pickerChatAdd(saveAsRecipe){
 }
 
 // ─── PICKER: BARCODE TAB ───
+function pickerToggleTorch(){
+  pickerTorchOn=!pickerTorchOn;
+  var btn=document.getElementById('torchBtn');
+  if(btn)btn.textContent=pickerTorchOn?'💡 Taschenlampe aus':'🔦 Taschenlampe ein/aus';
+  var videoEl=document.getElementById('pickerBarcodeVideo');
+  if(videoEl&&videoEl.srcObject){
+    var track=videoEl.srcObject.getVideoTracks()[0];
+    if(track&&track.getCapabilities&&track.getCapabilities().torch){
+      track.applyConstraints({advanced:[{torch:pickerTorchOn}]}).catch(function(){
+        showToast('Taschenlampe nicht verfügbar');
+        pickerTorchOn=!pickerTorchOn;
+        if(btn)btn.textContent='🔦 Taschenlampe ein/aus';
+      });
+    } else {
+      showToast('Taschenlampe nicht verfügbar');
+      pickerTorchOn=!pickerTorchOn;
+      if(btn)btn.textContent='🔦 Taschenlampe ein/aus';
+    }
+  }
+}
+
 function pickerStartScan(){
   var wrap=document.getElementById('pickerBarcodeWrap');
   wrap.classList.remove('hidden');
