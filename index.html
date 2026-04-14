@@ -1360,64 +1360,83 @@ function pickerChatAdd(saveAsRecipe){
 
 // ─── PICKER: BARCODE TAB ───
 function pickerStartScan(){
-  if(typeof ZXing==='undefined'){showToast('Scanner lädt...');return;}
   var wrap=document.getElementById('pickerBarcodeWrap');
   wrap.classList.remove('hidden');
   document.getElementById('pickerBcStartBtn').style.display='none';
   document.getElementById('pickerBcStopBtn').style.display='block';
-  document.getElementById('pickerBarcodeResult').innerHTML='<div style="font-size:12px;color:var(--mu);padding:6px;">📷 Kamera wird gestartet...</div>';
+  document.getElementById('pickerBarcodeResult').innerHTML='';
   pickerBcActive=true;
-  var hints=new Map();
-  hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS,[
-    ZXing.BarcodeFormat.EAN_13,ZXing.BarcodeFormat.EAN_8,
-    ZXing.BarcodeFormat.UPC_A,ZXing.BarcodeFormat.UPC_E,
-    ZXing.BarcodeFormat.CODE_128,ZXing.BarcodeFormat.CODE_39
-  ]);
-  hints.set(ZXing.DecodeHintType.TRY_HARDER,true);
-  pickerBcReader=new ZXing.BrowserMultiFormatReader(hints,300);
-  // Get list of cameras, pick back camera by deviceId
-  ZXing.BrowserMultiFormatReader.listVideoInputDevices().then(function(devices){
-    if(!pickerBcActive)return;
-    var deviceId=undefined; // undefined = ZXing picks default
-    if(devices&&devices.length>0){
-      // Try to find back/environment camera
-      var back=devices.find(function(d){
-        return /back|rear|environment|hinten|wide/i.test(d.label);
-      });
-      if(back){deviceId=back.deviceId;}
-      else if(devices.length>1){deviceId=devices[1].deviceId;} // usually back on mobile
-      else{deviceId=devices[0].deviceId;}
+  var videoEl=document.getElementById('pickerBarcodeVideo');
+  // Start camera stream
+  navigator.mediaDevices.getUserMedia({
+    video:{facingMode:'environment',width:{ideal:1280},height:{ideal:720}}
+  }).then(function(stream){
+    if(!pickerBcActive){stream.getTracks().forEach(function(t){t.stop();});return;}
+    videoEl.srcObject=stream;
+    videoEl.setAttribute('playsinline','');
+    videoEl.play();
+    // Option 1: Native BarcodeDetector API (Chrome Android 83+)
+    if('BarcodeDetector' in window){
+      var detector=new BarcodeDetector({formats:['ean_13','ean_8','upc_a','upc_e','code_128','code_39']});
+      pickerBcReader={_stream:stream};
+      pickerBcReader._scanLoop=setInterval(function(){
+        if(!pickerBcActive)return;
+        if(videoEl.readyState<2)return;
+        detector.detect(videoEl).then(function(barcodes){
+          if(!pickerBcActive)return;
+          if(barcodes&&barcodes.length>0){
+            var code=barcodes[0].rawValue;
+            clearInterval(pickerBcReader._scanLoop);
+            pickerStopScan();
+            pickerLookupBarcode(code);
+          }
+        }).catch(function(){});
+      },200);
+    // Option 2: ZXing fallback
+    } else if(typeof ZXing!=='undefined'){
+      var hints=new Map();
+      hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS,[
+        ZXing.BarcodeFormat.EAN_13,ZXing.BarcodeFormat.EAN_8,
+        ZXing.BarcodeFormat.UPC_A,ZXing.BarcodeFormat.UPC_E,
+        ZXing.BarcodeFormat.CODE_128,ZXing.BarcodeFormat.CODE_39
+      ]);
+      hints.set(ZXing.DecodeHintType.TRY_HARDER,true);
+      var reader=new ZXing.BrowserMultiFormatReader(hints,300);
+      pickerBcReader={_stream:stream,_zxing:reader};
+      var canvas=document.createElement('canvas');
+      var ctx=canvas.getContext('2d');
+      pickerBcReader._scanLoop=setInterval(function(){
+        if(!pickerBcActive)return;
+        if(videoEl.readyState<2)return;
+        canvas.width=videoEl.videoWidth;
+        canvas.height=videoEl.videoHeight;
+        if(!canvas.width)return;
+        ctx.drawImage(videoEl,0,0,canvas.width,canvas.height);
+        try{
+          var result=reader.decodeFromCanvas(canvas);
+          if(result&&result.getText()){
+            clearInterval(pickerBcReader._scanLoop);
+            pickerStopScan();
+            pickerLookupBarcode(result.getText());
+          }
+        }catch(e){}
+      },300);
+    } else {
+      document.getElementById('pickerBarcodeResult').innerHTML='<div style="font-size:13px;color:var(--re);padding:8px;">❌ Scanner nicht verfügbar.</div>';
     }
-    document.getElementById('pickerBarcodeResult').innerHTML='';
-    pickerBcReader.decodeFromVideoDevice(deviceId,'pickerBarcodeVideo',function(result,err){
-      if(!pickerBcActive)return;
-      if(result){
-        pickerStopScan();
-        pickerLookupBarcode(result.getText());
-        return;
-      }
-      if(err&&err.name&&err.name!=='NotFoundException'){
-        console.warn('[NutriTrack Barcode]',err.name,err.message);
-      }
-    });
   }).catch(function(err){
-    console.error('[NutriTrack listVideoInputDevices]',err);
-    // Fallback: try without deviceId
-    document.getElementById('pickerBarcodeResult').innerHTML='';
-    pickerBcReader.decodeFromVideoDevice(undefined,'pickerBarcodeVideo',function(result,err){
-      if(!pickerBcActive)return;
-      if(result){pickerStopScan();pickerLookupBarcode(result.getText());}
-    });
+    document.getElementById('pickerBarcodeResult').innerHTML='<div style="font-size:13px;color:var(--re);padding:8px;">❌ '+(err.name==='NotAllowedError'?'Kamerazugriff verweigert.':'Kamera nicht verfügbar: '+err.message)+'</div>';
+    pickerStopScan();
   });
 }
 function pickerStopScan(){
   pickerBcActive=false;
   if(pickerBcReader){
     try{if(pickerBcReader._scanLoop)clearInterval(pickerBcReader._scanLoop);}catch(e){}
-    try{pickerBcReader.reset();}catch(e){}
+    try{if(pickerBcReader._zxing)pickerBcReader._zxing.reset();}catch(e){}
+    try{if(pickerBcReader._stream)pickerBcReader._stream.getTracks().forEach(function(t){t.stop();});}catch(e){}
     pickerBcReader=null;
   }
-  // Stop camera stream
   var videoEl=document.getElementById('pickerBarcodeVideo');
   if(videoEl&&videoEl.srcObject){
     try{videoEl.srcObject.getTracks().forEach(function(t){t.stop();});}catch(e){}
