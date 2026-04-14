@@ -1927,11 +1927,7 @@ function closeOv(id){
 }
 function bgClose(e,id){if(e.target.id===id)closeOv(id);}
 
-// Settings shortcut
-document.addEventListener('DOMContentLoaded',function(){
-  var hbtn=document.querySelector('.hbtn');
-  if(hbtn)hbtn.onclick=openSettings;
-});
+// Settings shortcut removed - handled via onclick attributes
 
 // ════════════════════════════════════════
 // SECTION: TOAST
@@ -1939,24 +1935,35 @@ document.addEventListener('DOMContentLoaded',function(){
 function shareData(){
   var data={state:S,foodCache:foodCache,customFoods:customFoods,recipes:recipes,barcodeCache:barcodeCache};
   var json=JSON.stringify(data,null,2);
-  var file=new File([json],'nutritrack-backup-'+today()+'.json',{type:'application/json'});
-  if(navigator.canShare&&navigator.canShare({files:[file]})){
-    navigator.share({
-      title:'NutriTrack Backup',
-      text:'Meine NutriTrack Ernährungsdaten vom '+fmtDate(today()),
-      files:[file]
-    }).catch(function(e){if(e.name!=='AbortError')showToast('Teilen fehlgeschlagen');});
-  } else if(navigator.share){
-    // Fallback: share as text/link (no file support)
-    navigator.share({title:'NutriTrack Backup',text:json}).catch(function(){});
+  var filename='nutritrack-backup-'+today()+'.json';
+  // Try file share first (Android Chrome 89+)
+  if(navigator.share){
+    try{
+      var file=new File([json],filename,{type:'application/json'});
+      if(navigator.canShare&&navigator.canShare({files:[file]})){
+        navigator.share({title:'NutriTrack Backup',files:[file]})
+          .then(function(){showToast('Geteilt ✓');})
+          .catch(function(e){if(e.name!=='AbortError'){
+            // File share failed - try without file
+            navigator.share({title:'NutriTrack Backup '+today(),text:json})
+              .catch(function(){downloadBackup(json,filename);});
+          }});
+        return;
+      }
+    }catch(e){}
+    // Share without file
+    navigator.share({title:'NutriTrack Backup '+today(),text:json})
+      .catch(function(e){if(e.name!=='AbortError')downloadBackup(json,filename);});
   } else {
-    // Desktop fallback: download
-    var blob=new Blob([json],{type:'application/json'});
-    var url=URL.createObjectURL(blob),a=document.createElement('a');
-    a.href=url;a.download='nutritrack-backup-'+today()+'.json';a.click();
-    URL.revokeObjectURL(url);
-    showToast('Backup heruntergeladen 📥');
+    downloadBackup(json,filename);
   }
+}
+function downloadBackup(json,filename){
+  var blob=new Blob([json],{type:'application/json'});
+  var url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url;a.download=filename;a.click();
+  URL.revokeObjectURL(url);
+  showToast('Backup heruntergeladen 📥');
 }
 
 function showToast(msg){var t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},2500);}
