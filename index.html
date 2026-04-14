@@ -1392,8 +1392,30 @@ function pickerStartScan(){
   var videoEl=document.getElementById('pickerBarcodeVideo');
   // Start camera stream
   navigator.mediaDevices.getUserMedia({
-    video:{facingMode:'environment',width:{ideal:1280},height:{ideal:720}}
+    video:{
+      facingMode:'environment',
+      width:{ideal:1920},
+      height:{ideal:1080},
+      focusMode:'continuous',
+      advanced:[{zoom:2}]
+    }
   }).then(function(stream){
+    // Try to apply zoom + focus after stream starts
+    try{
+      var track=stream.getVideoTracks()[0];
+      if(track){
+        var caps=track.getCapabilities();
+        var constraints={};
+        if(caps.focusMode&&caps.focusMode.includes('continuous'))
+          constraints.focusMode='continuous';
+        if(caps.zoom){
+          var z=Math.min(2,caps.zoom.max);
+          if(z>caps.zoom.min)constraints.zoom=z;
+        }
+        if(Object.keys(constraints).length)
+          track.applyConstraints({advanced:[constraints]}).catch(function(){});
+      }
+    }catch(e){}
     if(!pickerBcActive){stream.getTracks().forEach(function(t){t.stop();});return;}
     videoEl.srcObject=stream;
     videoEl.setAttribute('playsinline','');
