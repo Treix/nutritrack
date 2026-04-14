@@ -116,8 +116,9 @@ button,input,select,textarea{font-family:'Nunito Sans',sans-serif;cursor:pointer
 
 /* ── OVERLAYS ── */
 .ov{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:300;display:none;align-items:flex-end;justify-content:center;backdrop-filter:blur(2px);}
+.ov .mod{position:fixed;bottom:0;left:0;right:0;max-width:430px;margin:0 auto;}
 .ov.open{display:flex;}
-.mod{background:white;border-radius:24px 24px 0 0;width:100%;max-width:430px;max-height:92vh;overflow-y:auto;animation:su .3s cubic-bezier(.4,0,.2,1);}
+.mod{background:white;border-radius:24px 24px 0 0;width:100%;max-width:430px;height:88vh;max-height:88vh;overflow-y:auto;animation:su .3s cubic-bezier(.4,0,.2,1);}
 @keyframes su{from{transform:translateY(100%);}to{transform:translateY(0);}}
 .mhan{width:40px;height:4px;background:var(--br);border-radius:2px;margin:11px auto 0;}
 .mhd{padding:14px 18px 12px;border-bottom:1px solid var(--br);}
@@ -1375,6 +1376,9 @@ function pickerStartScan(){
     videoEl.srcObject=stream;
     videoEl.setAttribute('playsinline','');
     videoEl.play();
+    // Show torch button
+    var tb=document.getElementById('torchBtn');if(tb)tb.style.display='block';
+    pickerTorchOn=false;if(tb)tb.textContent='🔦';
     // Option 1: Native BarcodeDetector API (Chrome Android 83+)
     if('BarcodeDetector' in window){
       var detector=new BarcodeDetector({formats:['ean_13','ean_8','upc_a','upc_e','code_128','code_39']});
@@ -1445,6 +1449,8 @@ function pickerStopScan(){
   var w=document.getElementById('pickerBarcodeWrap');if(w)w.classList.add('hidden');
   var s=document.getElementById('pickerBcStartBtn');if(s)s.style.display='block';
   var t=document.getElementById('pickerBcStopBtn');if(t)t.style.display='none';
+  var tb=document.getElementById('torchBtn');if(tb)tb.style.display='none';
+  pickerTorchOn=false;
 }
 
 function pickerLookupBarcode(code){
