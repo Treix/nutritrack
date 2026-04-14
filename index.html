@@ -364,9 +364,9 @@ button,input,select,textarea{font-family:'Nunito Sans',sans-serif;cursor:pointer
     <div class="mbd">
       <!-- Tabs -->
       <div class="picker-tabs">
+        <button type="button" class="picker-tab" id="ptab-chat" onclick="pickerSetTab('chat')"><span>💬</span>Chat</button>
         <button type="button" class="picker-tab act" id="ptab-search" onclick="pickerSetTab('search')"><span>🔍</span>Suche</button>
         <button type="button" class="picker-tab" id="ptab-foto" onclick="pickerSetTab('foto')"><span>📷</span>Foto</button>
-        <button type="button" class="picker-tab" id="ptab-chat" onclick="pickerSetTab('chat')"><span>💬</span>Chat</button>
         <button type="button" class="picker-tab" id="ptab-barcode" onclick="pickerSetTab('barcode')"><span>📊</span>Barcode</button>
         <button type="button" class="picker-tab" id="ptab-own" onclick="pickerSetTab('own')"><span>✚</span>Eigenes</button>
         <button type="button" class="picker-tab" id="ptab-quick" onclick="pickerSetTab('quick')"><span>⚡</span>Quick</button>
@@ -1006,11 +1006,11 @@ function openPicker(meal, defaultTab){
   document.getElementById('pickerTitle').textContent=(mealNames[pickerMeal]||'Mahlzeit')+' – Zutat hinzufügen';
   document.getElementById('pickerSub').textContent='Lokal + Online kombiniert';
   // Default tab
-  pickerSetTab(defaultTab||'search');
-  // Load default results
+  pickerSetTab(defaultTab||'chat');
+  // Load search results in background
   pickerLoadDefaultResults();
   openOv('pickerOv');
-  if(!defaultTab||defaultTab==='search')setTimeout(function(){document.getElementById('pickerSearchQ').focus();},350);
+  // Do NOT auto-focus - prevents keyboard popping up on mobile
 }
 
 function closePicker(){
@@ -1029,7 +1029,7 @@ function pickerSetTab(tab){
   if(panelEl)panelEl.classList.add('act');
   if(tab==='search'){pickerLoadDefaultResults();}
   if(tab==='barcode'){setTimeout(function(){pickerStartScan();},150);}
-  if(tab==='chat'){setTimeout(function(){var inp=document.getElementById('pickerChatInp');if(inp)inp.focus();},100);}
+  // No auto-focus on chat - user taps input to open keyboard
 }
 
 function pickerLoadDefaultResults(){
@@ -1110,6 +1110,20 @@ function pickerConfirmAdd(){
   if(!pickerSelFood)return;
   var amt=parseFloat(document.getElementById('pickerAmt').value)||1;
   var f=pickerSelFood;
+  // Check if we're adding to an existing diary entry's ingredient list
+  if(window._editEntryMode){
+    window._editEntryMode=false;
+    var e=getDay().meals[window._editEntryMeal][window._editEntryIdx];
+    if(e&&e.ingredients){
+      var per100=f.per100||{kcal:0,protein:0,carbs:0,fat:0};
+      e.ingredients.push({name:f.name,emoji:f.emoji,amount:amt,per100:per100});
+      saveS();closePicker();
+      openEditEntry(window._editEntryMeal,window._editEntryIdx);
+      showToast((f.emoji||'🍽')+' '+f.name+' hinzugefügt');
+      return;
+    }
+  }
+  // Normal: add to meal
   if(f.isRecipe){
     var rec=recipes.find(function(r){return r.id===f.recipeId;});
     if(!rec){showToast('Rezept nicht gefunden');return;}
@@ -1353,7 +1367,6 @@ function pickerStartScan(){
   document.getElementById('pickerBcStopBtn').style.display='block';
   document.getElementById('pickerBarcodeResult').innerHTML='<div style="font-size:12px;color:var(--mu);padding:6px;">📷 Kamera wird gestartet...</div>';
   pickerBcActive=true;
-  var videoEl=document.getElementById('pickerBarcodeVideo');
   var hints=new Map();
   hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS,[
     ZXing.BarcodeFormat.EAN_13,ZXing.BarcodeFormat.EAN_8,
@@ -1361,47 +1374,40 @@ function pickerStartScan(){
     ZXing.BarcodeFormat.CODE_128,ZXing.BarcodeFormat.CODE_39
   ]);
   hints.set(ZXing.DecodeHintType.TRY_HARDER,true);
-  pickerBcReader=new ZXing.BrowserMultiFormatReader(hints,200);
-  // Step 1: get back camera stream
-  navigator.mediaDevices.getUserMedia({
-    video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}}
-  }).then(function(stream){
-    if(!pickerBcActive){stream.getTracks().forEach(function(t){t.stop();});return;}
-    videoEl.srcObject=stream;
-    videoEl.setAttribute('playsinline','');
-    videoEl.play().then(function(){
-      document.getElementById('pickerBarcodeResult').innerHTML='';
-      // Step 2: continuous decode using canvas polling
-      var canvas=document.createElement('canvas');
-      var ctx=canvas.getContext('2d');
-      pickerBcReader._scanLoop=setInterval(function(){
-        if(!pickerBcActive)return;
-        if(videoEl.readyState!==4)return; // HAVE_ENOUGH_DATA
-        canvas.width=videoEl.videoWidth;
-        canvas.height=videoEl.videoHeight;
-        ctx.drawImage(videoEl,0,0,canvas.width,canvas.height);
-        try{
-          var result=pickerBcReader.decodeFromCanvas(canvas);
-          if(result&&result.getText()){
-            clearInterval(pickerBcReader._scanLoop);
-            pickerBcReader._scanLoop=null;
-            pickerStopScan();
-            pickerLookupBarcode(result.getText());
-          }
-        }catch(e){
-          // NotFoundException is normal between frames - ignore
-        }
-      },200);
-    }).catch(function(e){
-      console.error('[NutriTrack video.play]',e);
+  pickerBcReader=new ZXing.BrowserMultiFormatReader(hints,300);
+  // Get list of cameras, pick back camera by deviceId
+  ZXing.BrowserMultiFormatReader.listVideoInputDevices().then(function(devices){
+    if(!pickerBcActive)return;
+    var deviceId=undefined; // undefined = ZXing picks default
+    if(devices&&devices.length>0){
+      // Try to find back/environment camera
+      var back=devices.find(function(d){
+        return /back|rear|environment|hinten|wide/i.test(d.label);
+      });
+      if(back){deviceId=back.deviceId;}
+      else if(devices.length>1){deviceId=devices[1].deviceId;} // usually back on mobile
+      else{deviceId=devices[0].deviceId;}
+    }
+    document.getElementById('pickerBarcodeResult').innerHTML='';
+    pickerBcReader.decodeFromVideoDevice(deviceId,'pickerBarcodeVideo',function(result,err){
+      if(!pickerBcActive)return;
+      if(result){
+        pickerStopScan();
+        pickerLookupBarcode(result.getText());
+        return;
+      }
+      if(err&&err.name&&err.name!=='NotFoundException'){
+        console.warn('[NutriTrack Barcode]',err.name,err.message);
+      }
     });
   }).catch(function(err){
-    console.error('[NutriTrack Camera]',err);
-    var msg=err.name==='NotAllowedError'
-      ?'❌ Kamerazugriff verweigert.'
-      :'❌ Kamera nicht verfügbar: '+err.message;
-    document.getElementById('pickerBarcodeResult').innerHTML='<div style="font-size:13px;color:var(--re);padding:8px;">'+msg+'</div>';
-    pickerStopScan();
+    console.error('[NutriTrack listVideoInputDevices]',err);
+    // Fallback: try without deviceId
+    document.getElementById('pickerBarcodeResult').innerHTML='';
+    pickerBcReader.decodeFromVideoDevice(undefined,'pickerBarcodeVideo',function(result,err){
+      if(!pickerBcActive)return;
+      if(result){pickerStopScan();pickerLookupBarcode(result.getText());}
+    });
   });
 }
 function pickerStopScan(){
@@ -1580,12 +1586,10 @@ function editIngDel(i){
 }
 
 function editAddIng(){
-  // Open picker with callback to add to this entry
-  closeOv('editOv');
   var meal=editMeal,idx=editIdx;
-  // Temporarily hijack picker to add to entry
+  closeOv('editOv');
+  // Open picker - when item selected, add to this entry's ingredients
   openPicker(meal,'search');
-  // Override confirmAdd to add to entry instead
   window._editEntryMode=true;
   window._editEntryMeal=meal;
   window._editEntryIdx=idx;
