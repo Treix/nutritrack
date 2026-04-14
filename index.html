@@ -1936,26 +1936,22 @@ function shareData(){
   var data={state:S,foodCache:foodCache,customFoods:customFoods,recipes:recipes,barcodeCache:barcodeCache};
   var json=JSON.stringify(data,null,2);
   var filename='nutritrack-backup-'+today()+'.json';
-  // Try file share first (Android Chrome 89+)
-  if(navigator.share){
-    try{
-      var file=new File([json],filename,{type:'application/json'});
-      if(navigator.canShare&&navigator.canShare({files:[file]})){
-        navigator.share({title:'NutriTrack Backup',files:[file]})
-          .then(function(){showToast('Geteilt ✓');})
-          .catch(function(e){if(e.name!=='AbortError'){
-            // File share failed - try without file
-            navigator.share({title:'NutriTrack Backup '+today(),text:json})
-              .catch(function(){downloadBackup(json,filename);});
-          }});
-        return;
-      }
-    }catch(e){}
-    // Share without file
-    navigator.share({title:'NutriTrack Backup '+today(),text:json})
-      .catch(function(e){if(e.name!=='AbortError')downloadBackup(json,filename);});
-  } else {
-    downloadBackup(json,filename);
+  if(!navigator.share){downloadBackup(json,filename);return;}
+  // Always try file share directly - skip canShare check (unreliable)
+  try{
+    var file=new File([json],filename,{type:'application/json'});
+    navigator.share({title:'NutriTrack Backup',files:[file]})
+      .then(function(){showToast('Geteilt ✓');})
+      .catch(function(e){
+        if(e.name==='AbortError')return; // user cancelled
+        // File share not supported - open share dialog with text
+        navigator.share({title:'NutriTrack Sicherung vom '+today()})
+          .catch(function(){downloadBackup(json,filename);});
+      });
+  }catch(e){
+    // File constructor or share failed
+    navigator.share({title:'NutriTrack Sicherung vom '+today()})
+      .catch(function(){downloadBackup(json,filename);});
   }
 }
 function downloadBackup(json,filename){
