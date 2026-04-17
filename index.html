@@ -429,7 +429,16 @@ button,input,select,textarea{font-family:'Nunito Sans',sans-serif;cursor:pointer
             <input type="number" class="ai2" id="pickerPhotoPortions" value="1" min="0.1" step="0.1">
             <div class="au">Portion(en)</div>
           </div>
-          <div style="display:flex;gap:8px;margin-top:10px;">
+          <!-- Add more ingredients -->
+          <div style="border-top:1px solid var(--br);padding-top:10px;margin-top:6px;">
+            <div style="font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;margin-bottom:8px;">Weitere Zutat hinzufügen</div>
+            <div style="display:flex;gap:6px;margin-bottom:6px;">
+              <input type="text" class="psi" id="pickerPhotoAddQ" placeholder="Suchen oder beschreiben..." onkeydown="if(event.key==='Enter')pickerPhotoAddSearch()">
+              <button type="button" class="psg" onclick="pickerPhotoAddSearch()">Suchen</button>
+            </div>
+            <div id="pickerPhotoAddResults" class="rl" style="max-height:160px;overflow-y:auto;margin-bottom:8px;"></div>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:6px;">
             <button type="button" class="cb2" style="margin-top:0;" onclick="pickerPhotoAdd(false)">✓ Eintragen</button>
             <button type="button" class="cb2" style="margin-top:0;background:linear-gradient(135deg,#2d5f8a,#3d8bc4);" onclick="pickerPhotoAdd(true)">📋 Als Rezept</button>
           </div>
@@ -1311,6 +1320,34 @@ function pickerUpdatePhotoTotal(){
   document.getElementById('pickerPhotoTotal').textContent='1 Portion: '+totalStr(t)+(p!==1?'  ·  '+p+'× = '+totalStr({kcal:t.kcal*p,protein:t.protein*p,carbs:t.carbs*p,fat:t.fat*p}):'');
 }
 
+function pickerPhotoAddSearch(){
+  var q=(document.getElementById('pickerPhotoAddQ')||{}).value||'';
+  var results=searchLocal(q);
+  var el=document.getElementById('pickerPhotoAddResults');
+  if(!el)return;
+  if(!results.length){el.innerHTML='<div class="nr">Kein Ergebnis</div>';return;}
+  window._pickerPhotoAddRes=results;
+  el.innerHTML=results.slice(0,8).map(function(p,i){
+    return'<div class="ri" onclick="pickerPhotoAddFromResult('+i+')">'
+      +'<div class="ri-e">'+(p.emoji||'🍽')+'</div>'
+      +'<div style="flex:1;min-width:0;"><div class="ri-n">'+p.name+'</div>'
+      +(p.per100?'<div class="ri-d">'+Math.round(p.per100.kcal)+' kcal/100g</div>':'')
+      +'</div>'
+      +'<div style="font-size:18px;color:var(--g2);font-weight:900;">＋</div>'
+      +'</div>';
+  }).join('');
+}
+
+function pickerPhotoAddFromResult(i){
+  var p=(window._pickerPhotoAddRes||[])[i];if(!p)return;
+  if(p.isRecipe){showToast('Rezepte können nicht als Zutat hinzugefügt werden');return;}
+  pickerIngredients.push({name:p.name,emoji:p.emoji,amount:100,per100:p.per100});
+  document.getElementById('pickerPhotoAddQ').value='';
+  document.getElementById('pickerPhotoAddResults').innerHTML='';
+  pickerShowPhotoResult(document.getElementById('pickerRecipeName').value||'');
+  showToast((p.emoji||'🍽')+' '+p.name+' hinzugefügt');
+}
+
 function pickerPhotoAdd(saveAsRecipe){
   if(!pickerIngredients.length){showToast('Keine Zutaten');return;}
   var name=document.getElementById('pickerRecipeName').value.trim()||'Foto-Rezept';
@@ -1862,7 +1899,7 @@ function deleteRecipeById(id){recipes=recipes.filter(function(r){return r.id!==i
 function exportData(){
   var blob=new Blob([JSON.stringify({state:S,foodCache:foodCache,customFoods:customFoods,recipes:recipes,barcodeCache:barcodeCache},null,2)],{type:'application/json'});
   var url=URL.createObjectURL(blob),a=document.createElement('a');
-  a.href=url;a.download='nutritrack-backup.json';a.click();URL.revokeObjectURL(url);showToast('Backup exportiert 📤');
+  a.href=url;a.download='nutritrack-backup-'+today()+'.json';a.click();URL.revokeObjectURL(url);showToast('Backup exportiert 📤');
 }
 
 function importData(e){
