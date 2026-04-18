@@ -301,7 +301,7 @@ button,input,select,textarea{font-family:'Nunito Sans',sans-serif;cursor:pointer
 <!-- MAIN -->
 <div id="mainScreen" class="screen">
   <div class="hdr">
-    <div class="hr"><div class="logo">Nutri<em>Track</em> <span style="font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.5px;">Beta v0.052</span></div><div style="display:flex;gap:4px;"><button type="button" class="hbtn" onclick="shareData()" id="shareBtn">📤</button><button type="button" class="hbtn" onclick="openSettings()">⚙️</button></div></div>
+    <div class="hr"><div class="logo">Nutri<em>Track</em> <span style="font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.5px;">Beta v0.054</span></div><div style="display:flex;gap:4px;"><button type="button" class="hbtn" onclick="shareData()" id="shareBtn">📤</button><button type="button" class="hbtn" onclick="openSettings()">⚙️</button></div></div>
     <div class="dn">
       <button type="button" class="da" onclick="changeDay(-1)">‹</button>
       <div class="dl" id="dateLabel"></div>
@@ -351,7 +351,7 @@ button,input,select,textarea{font-family:'Nunito Sans',sans-serif;cursor:pointer
 
 <!-- STATS -->
 <div id="statsScreen" class="screen">
-  <div class="hdr"><div class="hr"><div class="logo">Nutri<em>Track</em> <span style="font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.5px;">Beta v0.052</span></div></div></div>
+  <div class="hdr"><div class="hr"><div class="logo">Nutri<em>Track</em> <span style="font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.5px;">Beta v0.054</span></div></div></div>
   <div class="stm">
     <div class="stc"><div class="stt">📅 Diese Woche</div><div class="wbs" id="weekBars"></div></div>
     <div class="stc"><div class="stt">🍽 Makros heute</div><div class="mdr" id="macroDet"></div></div>
@@ -758,17 +758,22 @@ window.addEventListener('DOMContentLoaded',function(){
   if(S.apiKey)showMain();
   // Service Worker
   if('serviceWorker' in navigator){
-    var sw='var C="nt-v6";self.addEventListener("install",e=>{self.skipWaiting();});self.addEventListener("activate",e=>{self.clients.claim();});self.addEventListener("fetch",e=>{var u=e.request.url;if(u.includes("anthropic")||u.includes("corsproxy")||u.includes("openfoodfacts")||u.includes("fonts.g")||u.includes("unpkg")){e.respondWith(fetch(e.request).catch(()=>new Response("",{status:503})));return;}e.respondWith(caches.match(e.request).then(c=>{if(c)return c;return fetch(e.request).then(r=>{if(r.ok){var cl=r.clone();caches.open(C).then(ca=>ca.put(e.request,cl));}return r;}).catch(()=>caches.match("/nutritrack/")||caches.match("/nutritrack/index.html"));}));});';
-    navigator.serviceWorker.register(URL.createObjectURL(new Blob([sw],{type:'application/javascript'}))).then(function(){
+    navigator.serviceWorker.register('/nutritrack/sw.js').then(function(){
       if(caches)caches.open('nt-v6').then(function(c){c.add(window.location.href).catch(function(){});});
-    }).catch(function(){});
+    }).catch(function(e){console.warn('SW registration failed:',e);});
   }
 });
 function updBadge(){var b=document.getElementById('offBadge');if(b)b.classList.toggle('hidden',isOnline);}
 function checkFullscreen(){
-  // Already in standalone/fullscreen mode
-  if(window.matchMedia('(display-mode: standalone)').matches)return;
-  if(window.navigator.standalone)return; // iOS PWA
+  // Already in standalone mode - hide banner permanently
+  if(window.matchMedia('(display-mode: standalone)').matches){
+    localStorage.setItem('nt_install_dismissed','1');
+    return;
+  }
+  if(window.navigator.standalone){
+    localStorage.setItem('nt_install_dismissed','1');
+    return;
+  }
   // Show install banner
   var el=document.getElementById('installBanner');
   if(el)el.classList.remove('hidden');
