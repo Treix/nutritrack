@@ -301,7 +301,7 @@ button,input,select,textarea{font-family:'Nunito Sans',sans-serif;cursor:pointer
 <!-- MAIN -->
 <div id="mainScreen" class="screen">
   <div class="hdr">
-    <div class="hr"><div class="logo">Nutri<em>Track</em> <span style="font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.5px;">Beta v0.057</span></div><div style="display:flex;gap:4px;"><button type="button" class="hbtn" onclick="openHelp()" style="font-size:13px;font-weight:800;color:var(--g1);border:2px solid var(--g2);border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;padding:0;">?</button><button type="button" class="hbtn" onclick="shareData()" id="shareBtn">📤</button><button type="button" class="hbtn" onclick="openSettings()">⚙️</button></div></div>
+    <div class="hr"><div class="logo">Nutri<em>Track</em> <span style="font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.5px;">Beta v0.058</span></div><div style="display:flex;gap:4px;"><button type="button" class="hbtn" onclick="openHelp()" style="font-size:13px;font-weight:800;color:var(--g1);border:2px solid var(--g2);border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;padding:0;">?</button><button type="button" class="hbtn" onclick="shareData()" id="shareBtn">📤</button><button type="button" class="hbtn" onclick="openSettings()">⚙️</button></div></div>
     <div class="dn">
       <button type="button" class="da" onclick="changeDay(-1)">‹</button>
       <div class="dl" id="dateLabel"></div>
@@ -356,7 +356,7 @@ button,input,select,textarea{font-family:'Nunito Sans',sans-serif;cursor:pointer
 
 <!-- STATS -->
 <div id="statsScreen" class="screen">
-  <div class="hdr"><div class="hr"><div class="logo">Nutri<em>Track</em> <span style="font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.5px;">Beta v0.057</span></div></div></div>
+  <div class="hdr"><div class="hr"><div class="logo">Nutri<em>Track</em> <span style="font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.5px;">Beta v0.058</span></div></div></div>
   <div class="stm">
     <div class="stc"><div class="stt">📅 Diese Woche</div><div class="wbs" id="weekBars"></div></div>
     <div class="stc"><div class="stt">🍽 Makros heute</div><div class="mdr" id="macroDet"></div></div>
@@ -1481,7 +1481,7 @@ function pickerSendChat(){
   document.getElementById('pickerChatSend').disabled=true;
   document.getElementById('pickerChatResult').classList.add('hidden');
   msgs.scrollTop=msgs.scrollHeight;
-  var prompt='Der Nutzer hat folgendes gegessen: '+msg+'\nErstelle ein JSON-Array mit ALLEN genannten Lebensmitteln.\nRegeln:\n- Jeden genannten Begriff als eigene Zutat\n- Namen EXAKT wie eingegeben übernehmen\n- Realistische Gramm-Schätzung\n- Format: [{"name":"Exakter Name","emoji":"Emoji","g":80}]\nKeine Lebensmittel weglassen oder zusammenfassen.';
+  var prompt='Der Nutzer hat folgendes gegessen: '+msg+'\nZerlege das in alle einzelnen Zutaten und Bestandteile.\nRegeln:\n- Jeden Bestandteil als eigene Zutat auflisten (z.B. "Kakao mit Sahne" → Kakao UND Sahne als separate Einträge)\n- Namen auf Deutsch, exakt wie beschrieben\n- Realistische individuelle Gramm-Schätzung pro Zutat\n- Keine Zutaten weglassen oder zusammenfassen\n- Format: [{"name":"Deutscher Name","emoji":"Emoji","g":80}]';
   callClaude('claude-haiku-4-5',[{type:'text',text:prompt}],300,
     function(text){
       var raw=parseIngJSON(text);
