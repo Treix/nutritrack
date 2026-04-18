@@ -301,7 +301,7 @@ button,input,select,textarea{font-family:'Nunito Sans',sans-serif;cursor:pointer
 <!-- MAIN -->
 <div id="mainScreen" class="screen">
   <div class="hdr">
-    <div class="hr"><div class="logo">Nutri<em>Track</em> <span style="font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.5px;">Beta v0.054</span></div><div style="display:flex;gap:4px;"><button type="button" class="hbtn" onclick="shareData()" id="shareBtn">📤</button><button type="button" class="hbtn" onclick="openSettings()">⚙️</button></div></div>
+    <div class="hr"><div class="logo">Nutri<em>Track</em> <span style="font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.5px;">Beta v0.055</span></div><div style="display:flex;gap:4px;"><button type="button" class="hbtn" onclick="openHelp()">❓</button><button type="button" class="hbtn" onclick="shareData()" id="shareBtn">📤</button><button type="button" class="hbtn" onclick="openSettings()">⚙️</button></div></div>
     <div class="dn">
       <button type="button" class="da" onclick="changeDay(-1)">‹</button>
       <div class="dl" id="dateLabel"></div>
@@ -351,7 +351,7 @@ button,input,select,textarea{font-family:'Nunito Sans',sans-serif;cursor:pointer
 
 <!-- STATS -->
 <div id="statsScreen" class="screen">
-  <div class="hdr"><div class="hr"><div class="logo">Nutri<em>Track</em> <span style="font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.5px;">Beta v0.054</span></div></div></div>
+  <div class="hdr"><div class="hr"><div class="logo">Nutri<em>Track</em> <span style="font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.5px;">Beta v0.055</span></div></div></div>
   <div class="stm">
     <div class="stc"><div class="stt">📅 Diese Woche</div><div class="wbs" id="weekBars"></div></div>
     <div class="stc"><div class="stt">🍽 Makros heute</div><div class="mdr" id="macroDet"></div></div>
@@ -576,6 +576,25 @@ button,input,select,textarea{font-family:'Nunito Sans',sans-serif;cursor:pointer
       </div>
       <button type="button" class="svb" onclick="saveOwnFoodEdit()">💾 Speichern</button>
       <button type="button" class="del-btn" onclick="deleteOwnFoodEdit()">🗑️ Löschen</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ HILFE ══ -->
+<div class="ov" id="helpOv" onclick="bgClose(event,'helpOv')">
+  <div class="mod" style="height:92vh;">
+    <div class="mhan"></div>
+    <div class="mhd">
+      <button type="button" class="mcl" onclick="closeOv('helpOv')">✕</button>
+      <div class="mti">❓ Hilfe & Anleitung</div>
+      <div class="msu">NutriTrack Benutzerhandbuch</div>
+    </div>
+    <div class="mbd" style="padding:0;height:calc(92vh - 80px);">
+      <iframe id="helpFrame"
+        src="https://treix.github.io/nutritrack/nutritrack_anleitung.pdf"
+        style="width:100%;height:100%;border:none;display:block;"
+        title="NutriTrack Anleitung">
+      </iframe>
     </div>
   </div>
 </div>
@@ -2088,6 +2107,14 @@ function shareData(){
     }catch(e){}
   }
   exportData();
+}
+
+function openHelp(){
+  // Force reload of PDF so latest version from GitHub is shown
+  var frame=document.getElementById('helpFrame');
+  var base='https://treix.github.io/nutritrack/nutritrack_anleitung.pdf';
+  frame.src=base+'?v='+Date.now();
+  openOv('helpOv');
 }
 
 function showToast(msg){var t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},2500);}
