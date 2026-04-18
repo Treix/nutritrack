@@ -301,7 +301,7 @@ button,input,select,textarea{font-family:'Nunito Sans',sans-serif;cursor:pointer
 <!-- MAIN -->
 <div id="mainScreen" class="screen">
   <div class="hdr">
-    <div class="hr"><div class="logo">Nutri<em>Track</em> <span style="font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.5px;">Beta v0.060</span></div><div style="display:flex;gap:4px;"><button type="button" class="hbtn" onclick="openHelp()" style="font-size:13px;font-weight:800;color:var(--g1);border:2px solid var(--g2);border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;padding:0;">?</button><button type="button" class="hbtn" onclick="shareData()" id="shareBtn">📤</button><button type="button" class="hbtn" onclick="openSettings()">⚙️</button></div></div>
+    <div class="hr"><div class="logo">Nutri<em>Track</em> <span style="font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.5px;">Beta v0.062</span></div><div style="display:flex;gap:4px;"><button type="button" class="hbtn" onclick="openHelp()" style="font-size:13px;font-weight:800;color:var(--g1);border:2px solid var(--g2);border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;padding:0;">?</button><button type="button" class="hbtn" onclick="shareData()" id="shareBtn">📤</button><button type="button" class="hbtn" onclick="openSettings()">⚙️</button></div></div>
     <div class="dn">
       <button type="button" class="da" onclick="changeDay(-1)">‹</button>
       <div class="dl" id="dateLabel"></div>
@@ -358,7 +358,7 @@ button,input,select,textarea{font-family:'Nunito Sans',sans-serif;cursor:pointer
 <div id="statsScreen" class="screen">
   <div class="hdr">
     <div class="hr">
-      <div class="logo">Nutri<em>Track</em> <span style="font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.5px;">Beta v0.060</span></div>
+      <div class="logo">Nutri<em>Track</em> <span style="font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.5px;">Beta v0.062</span></div>
       <div style="display:flex;gap:4px;">
         <button type="button" class="hbtn" onclick="openHelp()" style="font-size:13px;font-weight:800;color:var(--g1);border:2px solid var(--g2);border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;padding:0;">?</button>
         <button type="button" class="hbtn" onclick="shareData()">📤</button>
@@ -765,11 +765,11 @@ var DE_EN={apfel:'apple',birne:'pear',banane:'banana',orange:'orange',erdbeere:'
 var S={apiKey:'',name:'Du',goal:2000,weight:0,height:0,currentDate:'',days:{}};
 
 // Default prompts - editable in settings
-var DEFAULT_FOTO_PROMPT='Analysiere dieses Essensfoto auf Deutsch.\nGib ein JSON-Objekt zurueck:\n{"rezept":"Gesamtgerichtname auf Deutsch","zutaten":[{"name":"Zutat auf Deutsch","emoji":"Emoji","g":GRAMM}]}\n\nRegeln:\n- rezept: logischer Gesamtname (z.B. Butterkekse, Aperol Spritz)\n- zutaten: alle erkennbaren Komponenten als FERTIGE Lebensmittel\n- WICHTIG: Immer nur 1 Einheit/1 Stueck schatzen - Nutzer gibt Anzahl selbst an\n  Beispiel Kekse: 1 Keks ca. 8g - nicht alle Kekse auf dem Teller\n- Fertige Produkte, KEINE Rohzutaten:\n  FALSCH: Mehl, Wasser, Hefe fuer ein Broetchen\n  RICHTIG: Broetchen 1 Stueck\n- Logisch notwendige Zutaten erganzen auch wenn nicht sichtbar:\n  Belegtes Broetchen: Broetchen + Butter + Belag\n- Getraenke und Cocktails: alle typischen Zutaten aufteilen\n  Gesamtvolumen schatzen, Zutaten prozentual aufteilen\n  Aperol Spritz ca. 200ml: Prosecco ca. 90ml, Aperol ca. 60ml, Soda ca. 30ml, Orangenscheibe ca. 20g\n- Gramm individuell fuer 1 Einheit schatzen\n- Alle Namen auf Deutsch\n- Wenn nichts erkennbar: {"rezept":"","zutaten":[]}';
+var DEFAULT_FOTO_PROMPT='Analysiere dieses Essensfoto auf Deutsch.\nGib ein JSON-Objekt zurueck:\n{"rezept":"Gesamtgerichtname auf Deutsch","zutaten":[{"name":"Zutat auf Deutsch","emoji":"Emoji","g":GRAMM}]}\n\nRegeln:\n- rezept: logischer Gesamtname des Gerichts\n- zutaten: erkenne was SICHTBAR auf dem Teller/Bild liegt - benne es so wie ein Mensch es bestellen oder kaufen wuerde\n- Nenne das fertige Lebensmittel, nicht seine Zutaten oder Bestandteile\n- 1 Einheit schatzen (Nutzer gibt Menge selbst an)\n- Logisch notwendige Beilagen erganzen (z.B. Butter bei belegtem Brot)\n- Getraenke: typische Bestandteile mit realistischen Mengen\n- Keine Rohzutaten nennen aus denen etwas hergestellt wurde\n- Realistische Gramm pro Einheit\n- Alle Namen auf Deutsch\n- Wenn nichts erkennbar: {"rezept":"","zutaten":[]}'
 
 var DEFAULT_CHAT_PROMPT='Nutzer hat gegessen: {MSG}\nZerlege in alle einzelnen Zutaten.\nRegeln:\n- Jeden Bestandteil einzeln auflisten\n  Kakao mit Sahne -> Kakao UND Sahne separat\n  Aperol Spritz -> Aperol, Prosecco, Soda, Orangenscheibe\n- Fertige Produkte, KEINE Rohzutaten\n- Logisch notwendige Zutaten erganzen (Butter aufs Broetchen)\n- Immer nur 1 Einheit schatzen - Nutzer gibt Menge selbst an\n- Getraenke: typische Rezeptur aufteilen mit realistischen Mengen\n- Namen auf Deutsch\n- Realistische Gramm-Schatzung fuer 1 Einheit\n- Format: [{"name":"Deutscher Name","emoji":"Emoji","g":80}]';
 
-var PROMPT_VERSION='2';
+var PROMPT_VERSION='3';
 function getFotoPrompt(){
   // Reset if prompt version changed
   if(localStorage.getItem('nt_prompt_ver')!==PROMPT_VERSION){
@@ -1330,10 +1330,24 @@ function pickerHandlePhoto(e){
   reader.onload=function(ev){
     var img=new Image();
     img.onload=function(){
-      var c=document.createElement('canvas'),MAX=800,w=img.width,h=img.height;
+      var c=document.createElement('canvas'),MAX=1024,w=img.width,h=img.height;
       if(w>h){if(w>MAX){h=Math.round(h*MAX/w);w=MAX;}}else{if(h>MAX){w=Math.round(w*MAX/h);h=MAX;}}
-      c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);
-      var comp=c.toDataURL('image/jpeg',0.7);
+      c.width=w;c.height=h;
+      var ctx=c.getContext('2d');
+      ctx.drawImage(img,0,0,w,h);
+      // Enhance image: brightness + contrast for better KI recognition
+      var imageData=ctx.getImageData(0,0,w,h);
+      var data=imageData.data;
+      var brightness=20; // +20 brightness
+      var contrast=1.15; // +15% contrast
+      var factor=contrast;
+      for(var px=0;px<data.length;px+=4){
+        data[px]  =Math.min(255,Math.max(0,factor*(data[px]  -128)+128+brightness));
+        data[px+1]=Math.min(255,Math.max(0,factor*(data[px+1]-128)+128+brightness));
+        data[px+2]=Math.min(255,Math.max(0,factor*(data[px+2]-128)+128+brightness));
+      }
+      ctx.putImageData(imageData,0,0);
+      var comp=c.toDataURL('image/jpeg',0.85);
       window._pickerPhotoB64=comp.split(',')[1];
       document.getElementById('pickerPrev').src=comp;
       document.getElementById('pickerPrevWrap').classList.remove('hidden');
