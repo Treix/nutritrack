@@ -4,6 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#2d7d52">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="data:application/json,{%22name%22:%22NutriTrack%22,%22short_name%22:%22NutriTrack%22,%22start_url%22:%22/nutritrack/%22,%22display%22:%22standalone%22,%22background_color%22:%22%23f4f8f5%22,%22theme_color%22:%22%232d7d52%22,%22icons%22:[{%22src%22:%22https://raw.githubusercontent.com/Treix/nutritrack/main/icon.png%22,%22sizes%22:%22192x192%22,%22type%22:%22image/png%22}]}">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="NutriTrack">
 <title>NutriTrack</title>
@@ -297,12 +301,17 @@ button,input,select,textarea{font-family:'Nunito Sans',sans-serif;cursor:pointer
 <!-- MAIN -->
 <div id="mainScreen" class="screen">
   <div class="hdr">
-    <div class="hr"><div class="logo">Nutri<em>Track</em></div><div style="display:flex;gap:4px;"><button type="button" class="hbtn" onclick="shareData()" id="shareBtn">📤</button><button type="button" class="hbtn" onclick="openSettings()">⚙️</button></div></div>
+    <div class="hr"><div class="logo">Nutri<em>Track</em> <span style="font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.5px;">Beta v0.052</span></div><div style="display:flex;gap:4px;"><button type="button" class="hbtn" onclick="shareData()" id="shareBtn">📤</button><button type="button" class="hbtn" onclick="openSettings()">⚙️</button></div></div>
     <div class="dn">
       <button type="button" class="da" onclick="changeDay(-1)">‹</button>
       <div class="dl" id="dateLabel"></div>
       <button type="button" class="da" id="btnNext" onclick="changeDay(1)">›</button>
     </div>
+  </div>
+  <div id="installBanner" class="hidden" style="background:#e8f5e9;border:1.5px solid var(--g3);border-radius:12px;padding:11px 14px;margin:10px 12px 0;display:flex;align-items:center;gap:10px;">
+    <div style="font-size:20px;">📱</div>
+    <div style="flex:1;font-size:12px;color:var(--g1);font-weight:600;line-height:1.4;">Für Vollbild: Menü → <strong>„Zum Startbildschirm hinzufügen"</strong></div>
+    <button type="button" onclick="dismissInstall()" style="background:none;border:none;font-size:18px;color:#aaa;flex-shrink:0;">✕</button>
   </div>
   <div id="offBadge" class="off-badge hidden"><span>📴</span><div>Offline – lokale Datenbank aktiv</div></div>
   <div id="backupReminder" class="hidden" style="background:#fff8e1;border:1.5px solid #f9c74f;border-radius:12px;padding:11px 14px;margin:10px 12px 0;display:flex;align-items:center;gap:10px;">
@@ -342,7 +351,7 @@ button,input,select,textarea{font-family:'Nunito Sans',sans-serif;cursor:pointer
 
 <!-- STATS -->
 <div id="statsScreen" class="screen">
-  <div class="hdr"><div class="hr"><div class="logo">Nutri<em>Track</em></div></div></div>
+  <div class="hdr"><div class="hr"><div class="logo">Nutri<em>Track</em> <span style="font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.5px;">Beta v0.052</span></div></div></div>
   <div class="stm">
     <div class="stc"><div class="stt">📅 Diese Woche</div><div class="wbs" id="weekBars"></div></div>
     <div class="stc"><div class="stt">🍽 Makros heute</div><div class="mdr" id="macroDet"></div></div>
@@ -546,6 +555,31 @@ button,input,select,textarea{font-family:'Nunito Sans',sans-serif;cursor:pointer
   </div>
 </div>
 
+<!-- ══ EIGENES LEBENSMITTEL BEARBEITEN ══ -->
+<div class="ov" id="ownFoodEditOv" onclick="bgClose(event,'ownFoodEditOv')">
+  <div class="mod">
+    <div class="mhan"></div>
+    <div class="mhd"><button type="button" class="mcl" onclick="closeOv('ownFoodEditOv')">✕</button><div class="mti">Lebensmittel bearbeiten</div></div>
+    <div class="mbd">
+      <label class="lbl">Name</label>
+      <input type="text" class="sinp" id="ownEditName" placeholder="Name" style="margin-bottom:10px;">
+      <label class="lbl">Emoji</label>
+      <input type="text" class="sinp" id="ownEditEmoji" placeholder="Emoji" style="margin-bottom:10px;">
+      <label class="lbl">Nährwerte pro 100g</label>
+      <div class="srow" style="margin-bottom:8px;">
+        <div class="sf"><label class="lbl">kcal</label><input type="number" class="sinp" id="ownEditKcal"></div>
+        <div class="sf"><label class="lbl">Protein g</label><input type="number" class="sinp" id="ownEditProtein"></div>
+      </div>
+      <div class="srow" style="margin-bottom:12px;">
+        <div class="sf"><label class="lbl">Kohlenhydrate g</label><input type="number" class="sinp" id="ownEditCarbs"></div>
+        <div class="sf"><label class="lbl">Fett g</label><input type="number" class="sinp" id="ownEditFat"></div>
+      </div>
+      <button type="button" class="svb" onclick="saveOwnFoodEdit()">💾 Speichern</button>
+      <button type="button" class="del-btn" onclick="deleteOwnFoodEdit()">🗑️ Löschen</button>
+    </div>
+  </div>
+</div>
+
 <!-- ══ EINSTELLUNGEN ══ -->
 <div class="ov" id="settOv" onclick="bgClose(event,'settOv')">
   <div class="mod">
@@ -731,11 +765,25 @@ window.addEventListener('DOMContentLoaded',function(){
   }
 });
 function updBadge(){var b=document.getElementById('offBadge');if(b)b.classList.toggle('hidden',isOnline);}
+function checkFullscreen(){
+  // Already in standalone/fullscreen mode
+  if(window.matchMedia('(display-mode: standalone)').matches)return;
+  if(window.navigator.standalone)return; // iOS PWA
+  // Show install banner
+  var el=document.getElementById('installBanner');
+  if(el)el.classList.remove('hidden');
+}
+function dismissInstall(){
+  var el=document.getElementById('installBanner');
+  if(el)el.classList.add('hidden');
+  localStorage.setItem('nt_install_dismissed','1');
+}
 function showMain(){
   document.getElementById('setupScreen').classList.remove('active');
   document.getElementById('mainScreen').classList.add('active');
   renderAll();
   checkBackupReminder();
+  if(!localStorage.getItem('nt_install_dismissed'))checkFullscreen();
 }
 function checkBackupReminder(){
   try{
@@ -1768,7 +1816,8 @@ function openRecipeEditor(recipeId){
   document.getElementById('recEditEmoji').value=rec.emoji||'';
   recEditRenderIng(rec.ingredients||[]);
   recEditSearch();
-  openOv('recEditOv');
+  closeOv('settOv');
+  setTimeout(function(){openOv('recEditOv');},200);
 }
 
 function recEditRenderIng(ings){
@@ -1834,7 +1883,10 @@ function recEditSave(){
   var newEmoji=document.getElementById('recEditEmoji').value.trim();
   if(newName)rec.name=newName;
   if(newEmoji)rec.emoji=newEmoji;
-  saveX();renderSettFoodList();closeOv('recEditOv');showToast('Rezept gespeichert ✓');
+  saveX();
+  closeOv('recEditOv');
+  setTimeout(function(){openSettings();},200);
+  showToast('Rezept gespeichert ✓');
 }
 
 function recEditDelete(){
@@ -1871,11 +1923,13 @@ function renderSettFoodList(){
   if(customFoods.length){
     html+='<div style="font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;margin-bottom:6px;">Eigene Lebensmittel</div>';
     customFoods.forEach(function(f,i){
+      var ii=i;
       html+='<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--br);">'
         +'<div style="font-size:18px;">'+f.emoji+'</div>'
         +'<div style="flex:1;min-width:0;"><div style="font-weight:700;font-size:13px;">'+f.name+'</div>'
         +'<div style="font-size:11px;color:var(--mu);">'+f.per100.kcal+' kcal pro 100g</div></div>'
-        +'<button type="button" onclick="deleteOwnFood('+i+')" style="background:none;border:none;font-size:16px;color:var(--re);opacity:.6;">🗑️</button></div>';
+        +'<button type="button" onclick="openOwnFoodEdit('+ii+')" style="background:none;border:none;font-size:16px;color:var(--g2);margin-right:4px;">✏️</button>'
+        +'<button type="button" onclick="deleteOwnFood('+ii+')" style="background:none;border:none;font-size:16px;color:var(--re);opacity:.6;">🗑️</button></div>';
     });
   }
   if(recipes.length){
@@ -1891,6 +1945,52 @@ function renderSettFoodList(){
   }
   if(!html)html='<div style="font-size:13px;color:var(--mu);font-style:italic;">Noch keine eigenen Lebensmittel oder Rezepte.</div>';
   el.innerHTML=html;
+}
+
+var _ownFoodEditIdx=null;
+
+function openOwnFoodEdit(i){
+  _ownFoodEditIdx=i;
+  var f=customFoods[i];if(!f)return;
+  document.getElementById('ownEditName').value=f.name;
+  document.getElementById('ownEditEmoji').value=f.emoji||'';
+  document.getElementById('ownEditKcal').value=f.per100.kcal||0;
+  document.getElementById('ownEditProtein').value=f.per100.protein||0;
+  document.getElementById('ownEditCarbs').value=f.per100.carbs||0;
+  document.getElementById('ownEditFat').value=f.per100.fat||0;
+  closeOv('settOv');
+  setTimeout(function(){openOv('ownFoodEditOv');},200);
+}
+
+function saveOwnFoodEdit(){
+  var i=_ownFoodEditIdx;
+  if(i===null||!customFoods[i])return;
+  var name=document.getElementById('ownEditName').value.trim();
+  if(!name){showToast('Name eingeben');return;}
+  customFoods[i]={
+    name:name,
+    emoji:document.getElementById('ownEditEmoji').value.trim()||emo(name),
+    per100:{
+      kcal:parseFloat(document.getElementById('ownEditKcal').value)||0,
+      protein:parseFloat(document.getElementById('ownEditProtein').value)||0,
+      carbs:parseFloat(document.getElementById('ownEditCarbs').value)||0,
+      fat:parseFloat(document.getElementById('ownEditFat').value)||0
+    }
+  };
+  saveX();
+  closeOv('ownFoodEditOv');
+  setTimeout(function(){openSettings();},200);
+  showToast('Gespeichert ✓');
+}
+
+function deleteOwnFoodEdit(){
+  var i=_ownFoodEditIdx;
+  if(i===null)return;
+  customFoods.splice(i,1);
+  saveX();
+  closeOv('ownFoodEditOv');
+  setTimeout(function(){openSettings();},200);
+  showToast('Gelöscht');
 }
 
 function deleteOwnFood(i){customFoods.splice(i,1);saveX();renderSettFoodList();}
