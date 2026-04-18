@@ -301,7 +301,7 @@ button,input,select,textarea{font-family:'Nunito Sans',sans-serif;cursor:pointer
 <!-- MAIN -->
 <div id="mainScreen" class="screen">
   <div class="hdr">
-    <div class="hr"><div class="logo">Nutri<em>Track</em> <span style="font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.5px;">Beta v0.062</span></div><div style="display:flex;gap:4px;"><button type="button" class="hbtn" onclick="openHelp()" style="font-size:13px;font-weight:800;color:var(--g1);border:2px solid var(--g2);border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;padding:0;">?</button><button type="button" class="hbtn" onclick="shareData()" id="shareBtn">📤</button><button type="button" class="hbtn" onclick="openSettings()">⚙️</button></div></div>
+    <div class="hr"><div class="logo">Nutri<em>Track</em> <span style="font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.5px;">Beta v0.064</span></div><div style="display:flex;gap:4px;"><button type="button" class="hbtn" onclick="openHelp()" style="font-size:13px;font-weight:800;color:var(--g1);border:2px solid var(--g2);border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;padding:0;">?</button><button type="button" class="hbtn" onclick="shareData()" id="shareBtn">📤</button><button type="button" class="hbtn" onclick="openSettings()">⚙️</button></div></div>
     <div class="dn">
       <button type="button" class="da" onclick="changeDay(-1)">‹</button>
       <div class="dl" id="dateLabel"></div>
@@ -358,7 +358,7 @@ button,input,select,textarea{font-family:'Nunito Sans',sans-serif;cursor:pointer
 <div id="statsScreen" class="screen">
   <div class="hdr">
     <div class="hr">
-      <div class="logo">Nutri<em>Track</em> <span style="font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.5px;">Beta v0.062</span></div>
+      <div class="logo">Nutri<em>Track</em> <span style="font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.5px;">Beta v0.064</span></div>
       <div style="display:flex;gap:4px;">
         <button type="button" class="hbtn" onclick="openHelp()" style="font-size:13px;font-weight:800;color:var(--g1);border:2px solid var(--g2);border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;padding:0;">?</button>
         <button type="button" class="hbtn" onclick="shareData()">📤</button>
@@ -619,17 +619,13 @@ button,input,select,textarea{font-family:'Nunito Sans',sans-serif;cursor:pointer
     <div class="mhd">
       <button type="button" class="mcl" onclick="closeOv('promptOv')">✕</button>
       <div class="mti">⚙️ KI-Prompts</div>
-      <div class="msu">Anpassen wie die KI Fotos und Chat verarbeitet</div>
+      <div class="msu">Zeigt die aktiven KI-Prompts (nur zur Ansicht)</div>
     </div>
     <div class="mbd">
-      <label class="lbl">📷 Foto-Analyse Prompt</label>
-      <textarea id="fotoPrTxt" style="width:100%;border:2px solid var(--br);border-radius:10px;padding:10px;font-size:12px;font-family:monospace;line-height:1.5;outline:none;min-height:180px;resize:vertical;margin-bottom:10px;"></textarea>
-      <label class="lbl">💬 Chat Prompt</label>
-      <textarea id="chatPrTxt" style="width:100%;border:2px solid var(--br);border-radius:10px;padding:10px;font-size:12px;font-family:monospace;line-height:1.5;outline:none;min-height:120px;resize:vertical;margin-bottom:12px;"></textarea>
-      <div style="display:flex;gap:8px;">
-        <button type="button" class="svb" style="flex:2;" onclick="savePrompts()">💾 Speichern</button>
-        <button type="button" class="seb" style="flex:1;margin-top:0;" onclick="resetPrompts()">↺ Reset</button>
-      </div>
+      <label class="lbl">📷 Foto-Analyse Prompt (aktiv)</label>
+      <textarea id="fotoPrTxt" readonly style="width:100%;border:2px solid var(--br);border-radius:10px;padding:10px;font-size:12px;font-family:monospace;line-height:1.5;outline:none;min-height:180px;resize:vertical;margin-bottom:10px;background:var(--bg2);color:var(--mu);cursor:default;"></textarea>
+      <label class="lbl">💬 Chat Prompt (aktiv)</label>
+      <textarea id="chatPrTxt" readonly style="width:100%;border:2px solid var(--br);border-radius:10px;padding:10px;font-size:12px;font-family:monospace;line-height:1.5;outline:none;min-height:120px;resize:vertical;margin-bottom:12px;background:var(--bg2);color:var(--mu);cursor:default;"></textarea>
     </div>
   </div>
 </div>
@@ -773,11 +769,11 @@ var PROMPT_VERSION='3';
 function getFotoPrompt(){
   // Reset if prompt version changed
   if(localStorage.getItem('nt_prompt_ver')!==PROMPT_VERSION){
-    localStorage.removeItem('nt_foto_prompt');
+    localStorage.removeItem('nt_foto_prompt'); // Migration: alten gespeicherten Prompt löschen
     localStorage.removeItem('nt_chat_prompt');
     localStorage.setItem('nt_prompt_ver',PROMPT_VERSION);
   }
-  return localStorage.getItem('nt_foto_prompt')||DEFAULT_FOTO_PROMPT;
+  return DEFAULT_FOTO_PROMPT;
 }
 function getChatPrompt(){return localStorage.getItem('nt_chat_prompt')||DEFAULT_CHAT_PROMPT;}
 var foodCache={}, customFoods=[], recipes=[], barcodeCache={};
@@ -1440,7 +1436,7 @@ function pickerAnalyze(){
   var btn=document.getElementById('pickerAnalyzeBtn');
   btn.disabled=true;btn.innerHTML='<span style="display:inline-flex;gap:5px;align-items:center;"><span class="spin"></span>KI analysiert...</span>';
   pickerSetPhotoStatus('KI analysiert das Foto...',false);
-  var prompt='Analysiere dieses Essensfoto auf Deutsch.\nGib ein JSON-Objekt zurück:\n{"rezept":"Gesamtgerichtname auf Deutsch","zutaten":[{"name":"Zutat auf Deutsch","emoji":"Emoji","g":80}]}\nRegeln:\n- rezept: logischer Gesamtname\n- zutaten: alle sichtbaren Einzelbestandteile\n- Gramm individuell und realistisch schätzen, niemals pauschal 100g\n- Nur sichtbare Bestandteile\n- Wenn nichts erkennbar: {"rezept":"","zutaten":[]}';
+  var prompt=getFotoPrompt();
   callClaude('claude-sonnet-4-5',[{type:'image',source:{type:'base64',media_type:'image/jpeg',data:window._pickerPhotoB64}},{type:'text',text:prompt}],600,
     function(text){
       console.log('[NutriTrack KI-Antwort]',text);
@@ -1535,38 +1531,6 @@ function pickerPhotoAdd(saveAsRecipe){
     showToast('📸 '+name+' eingetragen');
   }
   saveS();renderAll();closePicker();
-}
-
-
-function doAnalyze(autoMode){
-  if(!window._pickerPhotoB64)return;
-  if(!isOnline){showToast('Foto-Analyse benötigt Internet');return;}
-  var btn=document.getElementById('pickerAnalyzeBtn');
-  btn.disabled=true;btn.innerHTML='<span style="display:inline-flex;gap:5px;align-items:center;"><span class="spin"></span>KI analysiert...</span>';
-  pickerSetPhotoStatus('KI analysiert das Foto...',false);
-  var prompt=getFotoPrompt();
-  callClaude('claude-sonnet-4-5',[{type:'image',source:{type:'base64',media_type:'image/jpeg',data:window._pickerPhotoB64}},{type:'text',text:prompt}],600,
-    function(text){
-      console.log('[NutriTrack KI-Antwort]',text);
-      var parsed=parsePhotoResponse(text);
-      btn.disabled=false;btn.textContent='📷 Erneut analysieren';
-      if(!parsed.zutaten.length){
-        var msg=text.length>0?'KI: '+text.slice(0,150):'Kein Lebensmittel erkannt. Besseres Foto versuchen.';
-        pickerSetPhotoStatus(msg,true);
-        return;
-      }
-      if(parsed.rezept){
-        var nameField=document.getElementById('pickerRecipeName');
-        if(nameField&&!nameField.value.trim())nameField.value=parsed.rezept;
-      }
-      lookupNutrients(parsed.zutaten,function(resolved){
-        pickerIngredients=resolved;
-        pickerShowPhotoResult(parsed.rezept);
-        pickerSetPhotoStatus('',false);
-      });
-    },
-    function(err){showToast('Fehler: '+err);btn.disabled=false;btn.textContent='📷 Erneut analysieren';pickerSetPhotoStatus('KI-Anfrage fehlgeschlagen: '+err,true);}
-  );
 }
 
 // ─── PICKER: CHAT TAB ───
@@ -2310,21 +2274,8 @@ function openPromptSettings(){
   closeOv('settOv');
   setTimeout(function(){openOv('promptOv');},200);
 }
-function savePrompts(){
-  var fp=document.getElementById('fotoPrTxt').value.trim();
-  var cp=document.getElementById('chatPrTxt').value.trim();
-  if(fp)localStorage.setItem('nt_foto_prompt',fp);
-  if(cp)localStorage.setItem('nt_chat_prompt',cp);
-  closeOv('promptOv');
-  showToast('Prompts gespeichert ✓');
-}
-function resetPrompts(){
-  localStorage.removeItem('nt_foto_prompt');
-  localStorage.removeItem('nt_chat_prompt');
-  document.getElementById('fotoPrTxt').value=DEFAULT_FOTO_PROMPT;
-  document.getElementById('chatPrTxt').value=DEFAULT_CHAT_PROMPT;
-  showToast('Prompts zurückgesetzt');
-}
+function savePrompts(){/* readonly – keine Funktion */}
+function resetPrompts(){/* readonly – keine Funktion */}
 
 function renderStats(){/* replaced by renderLibrary */}
 
