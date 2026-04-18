@@ -301,7 +301,7 @@ button,input,select,textarea{font-family:'Nunito Sans',sans-serif;cursor:pointer
 <!-- MAIN -->
 <div id="mainScreen" class="screen">
   <div class="hdr">
-    <div class="hr"><div class="logo">Nutri<em>Track</em> <span style="font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.5px;">Beta v0.055</span></div><div style="display:flex;gap:4px;"><button type="button" class="hbtn" onclick="openHelp()" style="font-size:13px;font-weight:800;color:var(--g1);border:2px solid var(--g2);border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;padding:0;">?</button><button type="button" class="hbtn" onclick="shareData()" id="shareBtn">📤</button><button type="button" class="hbtn" onclick="openSettings()">⚙️</button></div></div>
+    <div class="hr"><div class="logo">Nutri<em>Track</em> <span style="font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.5px;">Beta v0.056</span></div><div style="display:flex;gap:4px;"><button type="button" class="hbtn" onclick="openHelp()" style="font-size:13px;font-weight:800;color:var(--g1);border:2px solid var(--g2);border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;padding:0;">?</button><button type="button" class="hbtn" onclick="shareData()" id="shareBtn">📤</button><button type="button" class="hbtn" onclick="openSettings()">⚙️</button></div></div>
     <div class="dn">
       <button type="button" class="da" onclick="changeDay(-1)">‹</button>
       <div class="dl" id="dateLabel"></div>
@@ -356,7 +356,7 @@ button,input,select,textarea{font-family:'Nunito Sans',sans-serif;cursor:pointer
 
 <!-- STATS -->
 <div id="statsScreen" class="screen">
-  <div class="hdr"><div class="hr"><div class="logo">Nutri<em>Track</em> <span style="font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.5px;">Beta v0.055</span></div></div></div>
+  <div class="hdr"><div class="hr"><div class="logo">Nutri<em>Track</em> <span style="font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.5px;">Beta v0.056</span></div></div></div>
   <div class="stm">
     <div class="stc"><div class="stt">📅 Diese Woche</div><div class="wbs" id="weekBars"></div></div>
     <div class="stc"><div class="stt">🍽 Makros heute</div><div class="mdr" id="macroDet"></div></div>
@@ -1779,12 +1779,15 @@ function renderEditBody(e){
         +'<button type="button" class="ing-del" onclick="editIngDel('+i+')">✕</button>'
         +'</div>';
     }).join('');
-    body.innerHTML='<label class="lbl">Portionen</label>'
+    body.innerHTML='<label class="lbl">Name</label>'
+      +'<input type="text" class="finp" id="editName" value="'+e.name+'" style="margin-bottom:10px;">'
+      +'<label class="lbl">Portionen</label>'
       +'<div class="ar" style="margin-top:0;"><input type="number" class="ai2" id="editPortions" value="'+p+'" min="0.1" step="0.1" onchange="editUpdateTotal(this.value)"><div class="au">Portion(en)</div></div>'
       +'<div id="editTotal" class="rec-total" style="margin-top:8px;">1 Portion: '+totalStr(t)+'<br>'+p+'× = '+totalStr({kcal:t.kcal*p,protein:t.protein*p,carbs:t.carbs*p,fat:t.fat*p})+'</div>'
       +'<label class="lbl" style="margin-top:10px;">Zutaten</label>'
       +'<div class="ing-list" id="editIngList">'+ingHtml+'</div>'
       +'<button type="button" class="seb" style="margin-bottom:8px;" onclick="editAddIng()">+ Zutat hinzufügen</button>'
+      +(e.recipeId?'':'<button type="button" class="seb" style="margin-bottom:8px;border-color:var(--g2);color:var(--g2);" onclick="editSaveAsRecipe()">📋 Als Rezept speichern</button>')
       +'<button type="button" class="cb2" onclick="saveEditEntry()">Speichern ✓</button>'
       +'<button type="button" class="del-btn" onclick="deleteEntry()">🗑️ Eintrag löschen</button>';
   } else {
@@ -1826,6 +1829,8 @@ function editAddIng(){
 function saveEditEntry(){
   var day=getDay(),e=day.meals[editMeal][editIdx];
   if(e.isRecipe){
+    var newName=document.getElementById('editName');
+    if(newName&&newName.value.trim())e.name=newName.value.trim();
     var p=parseFloat(document.getElementById('editPortions').value)||1;
     e.portions=p;
     var t=ingTotal(e.ingredients||[]);
@@ -1836,6 +1841,19 @@ function saveEditEntry(){
     var r=amt/100;e.amount=amt;e.kcal=per100.kcal*r;e.protein=per100.protein*r;e.carbs=per100.carbs*r;e.fat=per100.fat*r;
   }
   saveS();renderAll();closeOv('editOv');showToast('Aktualisiert ✓');
+}
+
+function editSaveAsRecipe(){
+  var e=getDay().meals[editMeal][editIdx];
+  if(!e||!e.ingredients)return;
+  var name=(document.getElementById('editName')||{}).value||e.name||'Rezept';
+  var rec={id:Date.now().toString(),name:name.trim(),emoji:e.emoji||'📋',ingredients:JSON.parse(JSON.stringify(e.ingredients))};
+  recipes.unshift(rec);
+  e.recipeId=rec.id; // link entry to new recipe
+  e.name=rec.name;
+  saveX();saveS();
+  renderEditBody(e); // re-render to hide the button
+  showToast('📋 Als Rezept gespeichert');
 }
 
 function deleteEntry(){
